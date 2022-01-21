@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 
-# TODO nf-core: Update the script to check the samplesheet
-# This script is based on the example at: https://raw.githubusercontent.com/nf-core/test-datasets/viralrecon/samplesheet/samplesheet_test_illumina_amplicon.csv
+"""
+modified by: chase mateusiak 20220126
+Check sample sheet input for accuracy. Only slightly modified from the nf-co template
+"""
+
+# TODO check that the barcode file is actually a tsv/csv (whatever i decide it should be)
 
 import os
 import sys
@@ -38,18 +42,16 @@ def print_error(error, context="Line", context_str=""):
     sys.exit(1)
 
 
-# TODO nf-core: Update the check_samplesheet function
 def check_samplesheet(file_in, file_out):
     """
+    :param file_in: path to the inputted sample_sheet
+    :param file_out: path to the parsed sample sheet for internal pipeline usage
+
     This function checks that the samplesheet follows the following structure:
 
-    sample,fastq_1,fastq_2
-    SAMPLE_PE,SAMPLE_PE_RUN1_1.fastq.gz,SAMPLE_PE_RUN1_2.fastq.gz
-    SAMPLE_PE,SAMPLE_PE_RUN2_1.fastq.gz,SAMPLE_PE_RUN2_2.fastq.gz
-    SAMPLE_SE,SAMPLE_SE_RUN1_1.fastq.gz,
-
-    For an example see:
-    https://raw.githubusercontent.com/nf-core/test-datasets/viralrecon/samplesheet/samplesheet_test_illumina_amplicon.csv
+    sample,fastq_1,fastq_2,barcodes_path
+    sample1,sample1_R1.fastq.gz,sample1_R2.fastq.gz,sample1_barcodes.tsv
+    sample2,sample2_R1.fastq.gz,sample2_R2.fastq.gz,sample2_barcodes.tsv
     """
 
     sample_mapping_dict = {}
@@ -57,8 +59,7 @@ def check_samplesheet(file_in, file_out):
 
         ## Check header
         MIN_COLS = 2
-        # TODO nf-core: Update the column names for the input samplesheet
-        HEADER = ["sample", "fastq_1", "fastq_2"]
+        HEADER = ["sample", "fastq_1", "fastq_2", "barcodes"]
         header = [x.strip('"') for x in fin.readline().strip().split(",")]
         if header[: len(HEADER)] != HEADER:
             print("ERROR: Please check samplesheet header -> {} != {}".format(",".join(header), ",".join(HEADER)))
@@ -84,7 +85,7 @@ def check_samplesheet(file_in, file_out):
                 )
 
             ## Check sample name entries
-            sample, fastq_1, fastq_2 = lspl[: len(HEADER)]
+            sample, fastq_1, fastq_2, barcodes = lspl[: len(HEADER)]
             sample = sample.replace(" ", "_")
             if not sample:
                 print_error("Sample entry has not been specified!", "Line", line)
@@ -100,17 +101,24 @@ def check_samplesheet(file_in, file_out):
                             "Line",
                             line,
                         )
+            ## Check that barcodes
+            barcodes = barcodes.replace(" ", "_")
+            if not barcodes and not barcodes.endswith("tsv"):
+                print_error("The barcodes file must exist for every sample, \
+                    and it must be a tsv file with extension tsv", "Line", line)
 
+            ## make list of the three validated items associated with each sample
             ## Auto-detect paired-end/single-end
-            sample_info = []  ## [single_end, fastq_1, fastq_2]
+            ## cite: nf-core/rnaseq/check_samplesheet.csv
+            sample_info = []  ## [single_end, fastq_1, fastq_2, strandedness]
             if sample and fastq_1 and fastq_2:  ## Paired-end short reads
-                sample_info = ["0", fastq_1, fastq_2]
+                sample_info = ["0", fastq_1, fastq_2, barcodes]
             elif sample and fastq_1 and not fastq_2:  ## Single-end short reads
-                sample_info = ["1", fastq_1, fastq_2]
+                sample_info = ["1", fastq_1, fastq_2, barcodes]
             else:
                 print_error("Invalid combination of columns provided!", "Line", line)
 
-            ## Create sample mapping dictionary = { sample: [ single_end, fastq_1, fastq_2 ] }
+            ## Create sample mapping dictionary = { sample: [fastq_1, fastq_2 ] }
             if sample not in sample_mapping_dict:
                 sample_mapping_dict[sample] = [sample_info]
             else:
@@ -124,7 +132,7 @@ def check_samplesheet(file_in, file_out):
         out_dir = os.path.dirname(file_out)
         make_dir(out_dir)
         with open(file_out, "w") as fout:
-            fout.write(",".join(["sample", "single_end", "fastq_1", "fastq_2"]) + "\n")
+            fout.write(",".join(["sample", "single_end", "fastq_1", "fastq_2", "barcodes"]) + "\n")
             for sample in sorted(sample_mapping_dict.keys()):
 
                 ## Check that multiple runs of the same sample are of the same datatype
