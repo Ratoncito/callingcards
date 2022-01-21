@@ -9,6 +9,12 @@ Initial release of nf-core/callingcards, created with the [nf-core](https://nf-c
 
 ### `Added`
 
+### `Changed`
+modules.config extra arguments are added as a groovy list and joined, a la
+the nf-core/rnaseq pipeline modules.config file. All options for the modules
+are parameterized and set in the nextflow.config rather than having any
+hard coding
+
 ### `Fixed`
 
 ### `Dependencies`

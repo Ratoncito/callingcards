@@ -11,7 +11,15 @@
             "fa_icon": "fas fa-terminal",
             "description": "Define where the pipeline should find input data and save output data.",
             "required": [
-                "input"
+                "input",
+                "aligner",
+                "barcode_length",
+                "insertion_length",
+                "r1_bc_pattern",
+                "promoter_bed",
+                "background_data",
+                "pileup_stranded",
+                "min_mapq"
             ],
             "properties": {
                 "input": {
@@ -23,6 +31,54 @@
                     "description": "Path to comma-separated file containing information about the samples in the experiment.",
                     "help_text": "You will need to create a design file with information about the samples in your experiment before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 columns, and a header row. See [usage docs](https://nf-co.re/callingcards/usage#samplesheet-input).",
                     "fa_icon": "fas fa-file-csv"
+                },
+                "aligner": {
+                    "type": "string",
+                    "description": "Choose one of {'bwamem2', } to align the reads",
+                    "default": "bwamem2"
+                },
+                "bwamem2_index": {
+                    "type": "string",
+                    "default": "None"
+                },
+                "min_mapq": {
+                    "type": "integer",
+                    "default": 10,
+                    "description": "minimum alignment quality (mapq in bam file) read to accept in the bed file which summarizes unique calling cards insertions by barcode"
+                },
+                "barcode_length": {
+                    "type": "integer",
+                    "description": "the combined length of the barcodes in R1 and R2",
+                    "default": 13
+                },
+                "insertion_length": {
+                    "type": "integer",
+                    "default": 1,
+                    "description": "length of the insertion sequence upstream of the insertion site (mammals only)"
+                },
+                "r1_bc_pattern": {
+                    "type": "string",
+                    "default": "NNNNNNNNXXXX",
+                    "description": "UMI tools style barcode pattern for R1. See UMI tools docs for details"
+                },
+                "r2_bc_pattern": {
+                    "type": "string",
+                    "default": "NNNNNXXXXXXXXXXXXXXXXX",
+                    "description": "UMI tools style barcode pattern for R2. See UMI tools docs for details"
+                },
+                "promoter_bed": {
+                    "type": "string",
+                    "description": "path to the bed file which defines promoter regions",
+                    "fa_icon": "fas fa-file"
+                },
+                "background_data": {
+                    "type": "string",
+                    "description": "background hop data against which to calculate significance",
+                    "fa_icon": "fas fa-file-csv"
+                },
+                "pileup_stranded": {
+                    "type": "string",
+                    "description": "Boolean -- whether to consider strand of reads in pileup. Default is FALSE"
                 },
                 "outdir": {
                     "type": "string",
@@ -64,6 +120,10 @@
                     "description": "Path to FASTA genome file.",
                     "help_text": "This parameter is *mandatory* if `--genome` is not specified. If you don't have a BWA index available this will be generated for you automatically. Combine with `--save_reference` to save BWA index for future runs.",
                     "fa_icon": "far fa-file-code"
+                },
+                "fasta_index": {
+                    "type": "string",
+                    "default": "None"
                 },
                 "igenomes_base": {
                     "type": "string",

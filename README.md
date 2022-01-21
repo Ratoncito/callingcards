@@ -14,10 +14,164 @@
 [![Follow on Twitter](http://img.shields.io/badge/twitter-%40nf__core-1DA1F2?labelColor=000000&logo=twitter)](https://twitter.com/nf_core)
 [![Watch on YouTube](http://img.shields.io/badge/youtube-nf--core-FF0000?labelColor=000000&logo=youtube)](https://www.youtube.com/c/nf-core)
 
+## Development notes
+
+There are subtle, idiosyncratic and frustrating details regarding
+ [samtools mpileup](http://www.htslib.org/doc/samtools-mpileup.html),
+[bcftools mpileup](https://samtools.github.io/bcftools/bcftools.html#mpileup)
+-- samtools mpileup is essentially deprecated in favor of this -- and
+[samtools depth](http://www.htslib.org/doc/samtools-depth.html)
+(see, in particular, the notes at the bottom). I've so far kept samtools mpileup,
+but should likely switch to either bcftools mpileup or samtools depth.
+## DEVELOPMENT INSTALLATION
+
+You will need the following two pieces of software to run this pipeline:
+
+1. [Nextflow](https://www.nextflow.io/)
+2. One of: [Singularity](https://sylabs.io/singularity/), [Docker](https://www.docker.com/) or [conda](https://docs.conda.io/en/latest/) (singularity or docker are far preferred)
+
+AND, you will need to download [git lfs](https://git-lfs.github.com/) in order to
+fully clone this repository. This is not a good way of doing the test data, but
+until I curtail the chr1 fasta file, it is how I am doing it.
+If you are on a linux system that you own, do this:
+
+```
+$ sudo apt update
+$ sudo apt install git-lfs
+$ git lfs install
+```
+On the HTCF cluster, you can do this through `spack`.
+
+If you're using mac, then you can probably substitute `apt` for `brew`. If you're
+using Windows, you should think about the life choices that have brought you to
+this point, and then partition your hard drive and install ubuntu. Or, google
+about and then let me know what works, and I'll update the readme.
+
+Alternatively, email me, and I'll send you a a zipped version of the repo.
+
+Note: it isn't necessary to make the cc_tester directory -- call it whatever you
+like, or do this differently. Just make sure the path in the run script below
+points to the main.nf file in the callingcards repo.
+
+Assuming you have git lfs, then clone the repo.
+
+```
+$ mkdir cc_tester
+# you could download/install the nextflow executable in this directory
+$ cd cc_tester
+$ git clone https://github.com/cmatKhan/callingcards.git
+```
+
+Next, copy and paste the script below into a file called, for example, `run_nf.sh`
+
+```
+#!/bin/bash
+
+mkdir tmp
+
+# CHOOSE ONE OF SINGULARITY, DOCKER OR CONDA. I haven't tested docker. It probably works
+nextflow run callingcards/main.nf  -profile test_human,<singularity/docker/conda> -resume
+
+```
+Note that this assumes that nextflow is either in your `$PATH`, or the executable is
+in the same directory from which you are launching this script.
+
+Make the script executable (on a linux system, `chmod +x run_nf.sh`) and then launch:
+
+```
+./run_nf.sh
+```
+
+You could just execute the line in the runscript, but if there are errors, I'll ask to see the
+submission command -- saving the run command is useful for debugging.
+
+This will run the pipeline locally, meaning the compute resources come from
+the machine from which you launch. Be careful -- don't do this from a login node
+on the cluster, for example. This will work on your local computer, or an interactive
+node, with at least 16GB ram.
+
+If you want to test this via scheduler submission, then here are examples of
+SLURM and and SGE submission scripts:
+
+__SLURM__ (htcf)
+```
+#!/usr/bin/env bash
+
+eval $(spack load --sh openjdk)
+eval $(spack load --sh singularityce@3.8.0)
+eval $(spack load --sh nextflow)
+
+mkdir tmp
+
+nextflow run callingcards/main.nf  -profile test_slurm,singularity -resume
+```
+
+
+__SGE__ (dsg -- the genetics cluster. Note that I'm using conda, not singularity, since singularity isn't available on their cluster)
+```
+#!/bin/bash
+
+#$ -N nf_tester
+#$ -cwd
+#$ -o /dsgmnt/llfs_external/$USER/logs
+#$ -e /dsgmnt/llfs_external/$USER/logs
+
+root=/dsgmnt/llfs_external/cmateusiak
+
+# activate environment
+# note that in this case, I installed nextflow using conda like so:
+# conda create -p /path/to/envs/dir/nextflow nextflow
+source activate $root/conda_envs/nextflow
+
+mkdir tmp
+
+nextflow run callingcards/main.nf  -profile test_sge,conda -resume
+
+```
+
+### yeast data
+
+A test profile for yeast hasn't yet been created, but this will handle yeast (paired or single end data, with barcodes either only on the first read, or on both reads) data through the pile up, also. Here is an example of what a params file, and the input sheet, would look like:
+
+params.json
+```
+{
+  "input":"input_samplesheet.csv",
+  "aligner":"bwamem2",
+  "fasta":"\/home\/oguzkhan\/ref\/S288C_R64\/GCF_000146045.2_R64_genomic.fa",
+  "r1_bc_pattern":"NNNNNXXXXXXXXXXXXXXXXX",
+  "r2_bc_pattern":"NNNNNNNNXXXX",
+  "barcode_length": 13,
+  "min_mapq": 10,
+  "promoter_bed": "\/home\/oguzkhan\/Desktop\/tmp\/cc_tester\/rmlab_notOrf.bed",
+  "background_data": "\/home\/oguzkhan\/Desktop\/tmp\/cc_tester\/old_testin\/NOTF_Minus_Adh1_2015_17_combined_chase_edit.csv",
+  "pileup_stranded": "FALSE"
+}
+
+```
+
+input_sheet.csv
+```
+sample,fastq_1,fastq_2,barcodes
+run_5399,run_5399/PhiX_S1_R1_001.fastq.gz,run_5399/PhiX_S1_R2_001.fastq.gz,/home/oguzkhan/Desktop/tmp/cc_tester/old_testing/run_5399_demult_barcodes.tsv
+
+```
+And this is what demult barcode looks like for this run:
+
+```
+MIG2	TCAGTCCCGTTGG
+CAT8	GCCTGGGCGGCAG
+GLN3	ATTTGGGGGGGGT
+ARO80	TTGGTGGGGGTAG
+CBF1	CTCGGTCGTCAGT
+```
+If you want to test the pipeline on yeast data, it is likely best just to let me know and let me help get it started (until I get a test profile made, at which point, it will be like above, where you can just use the profile 'test_yeast' rather than 'test_human')
+
+# IGNORE EVERYTHING BELOW
 ## Introduction
 
 <!-- TODO nf-core: Write a 1-2 sentence summary of what data the pipeline is for and what it does -->
-**nf-core/callingcards** is a bioinformatics best-practice analysis pipeline for A bioinformatics analysis pipeline for processing Transposon Calling Cards sequencing data.
+**nf-core/callingcards** is a bioinformatics analysis pipeline for processing Transposon Calling Cards sequencing data.
 
 The pipeline is built using [Nextflow](https://www.nextflow.io), a workflow tool to run tasks across multiple compute infrastructures in a very portable manner. It uses Docker/Singularity containers making installation trivial and results highly reproducible. The [Nextflow DSL2](https://www.nextflow.io/docs/latest/dsl2.html) implementation of this pipeline uses one container per process which makes it much easier to maintain and update software dependencies. Where possible, these processes have been submitted to and installed from [nf-core/modules](https://github.com/nf-core/modules) in order to make them available to all nf-core pipelines, and to everyone within the Nextflow community!
 
@@ -28,8 +182,14 @@ On release, automated continuous integration tests run the pipeline on a full-si
 
 <!-- TODO nf-core: Fill in short bullet-pointed list of the default steps in the pipeline -->
 
-1. Read QC ([`FastQC`](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/))
-2. Present QC for raw reads ([`MultiQC`](http://multiqc.info/))
+1. Check the sample sheet
+2. Append barcodes to the fastq ID line with UMI Tools ([`UMI Tools`](https://umi-tools.readthedocs.io/en/latest/))
+2. Read QC ([`FastQC`](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/))
+3. Align ([`bwamem2 mem`](https://github.com/bwa-mem2/bwa-mem2https://umi-tools.readthedocs.io/en/latest/))
+4. Add the barcodes as read groups to the bam, index and sort. Implemented in ([a custom script](https://github.com/BrentLab/callingcards/blob/main/bin/add_read_group.py) using [pysam](https://pysam.readthedocs.io/en/latest/api.html).
+5. Bam QC ([`Qualimap`](http://qualimap.conesalab.org/))
+6.
+5. Present QC for raw reads ([`MultiQC`](http://multiqc.info/))
 
 ## Quick Start
 
