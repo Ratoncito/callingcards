@@ -133,7 +133,6 @@ params.json
   "r1_bc_pattern":"NNNNNXXXXXXXXXXXXXXXXX",
   "r2_bc_pattern":"NNNNNNNNXXXX",
   "barcode_length": 13,
-  "samtools_mpileup_adjust_mq": 50,
   "min_mapq": 10,
   "promoter_bed": "\/home\/oguzkhan\/Desktop\/tmp\/cc_tester\/rmlab_notOrf.bed",
   "background_data": "\/home\/oguzkhan\/Desktop\/tmp\/cc_tester\/old_testin\/NOTF_Minus_Adh1_2015_17_combined_chase_edit.csv",

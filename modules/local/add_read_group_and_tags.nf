@@ -18,7 +18,7 @@ process ADD_RG_AND_TAGS {
 
 
     output:
-    tuple val(meta), path("*tagged.bam") , emit: bam_index
+    tuple val(meta), path("*tagged.bam") , emit: bam
     path("*tagged.bam.bai")              , emit: bai
     path  "versions.yml"                 , emit: versions
 

@@ -123,7 +123,7 @@ def add_read_group_and_tags(bampath_in, bampath_out, genome_path,
         # (using the bitwise operator) check if the read is unmapped,
         # if so, set the region_dict start and end to *, indicating that there is
         # no alignment, and so there is no start and end region for the alignment
-        if read.flag & 0x4 or read.flag & 0x8:
+        if read.flag & 0x4:
             region_dict['start'] = "*"
             region_dict['end']   = "*"
         # if the bit flag 0x10 is set, the read reverse strand. Handle accordingly

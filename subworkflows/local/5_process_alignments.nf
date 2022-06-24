@@ -6,7 +6,7 @@
 
 include { SAMTOOLS_SORT_INDEX_STATS } from '../nf-core/samtools_bam_sort_index_stats'
 include { ADD_RG_AND_TAGS           } from '../../modules/local/add_read_group_and_tags'
-include { SAMTOOLS_MPILEUP          } from '../../modules/nf-core/modules/samtools/mpileup/main'
+include { COUNT_HOPS                } from '../../modules/local/count_hops'
 
 workflow PROCESS_ALIGNMENTS {
     take:
@@ -32,19 +32,19 @@ workflow PROCESS_ALIGNMENTS {
     )
     ch_version = ch_versions.mix(ADD_RG_AND_TAGS.out.versions)
 
-    SAMTOOLS_MPILEUP(
-        ADD_RG_AND_TAGS.out.bam_index,
-        fasta
+    COUNT_HOPS(
+        ADD_RG_AND_TAGS.out.bam,
+        ADD_RG_AND_TAGS.out.bai,
+        params.min_mapq
     )
-    ch_versions = ch_versions.mix(SAMTOOLS_MPILEUP.out.versions)
+    ch_version = ch_versions.mix(COUNT_HOPS.out.versions)
 
 
     emit:
-    bam_index = ADD_RG_AND_TAGS.out.bam_index // channel: [ val(meta), [ bam ], [ bai ] ]
+    bam_index = ADD_RG_AND_TAGS.out.bam                // channel: [ val(meta), [ bam ], [ bai ] ]
     stats     = SAMTOOLS_SORT_INDEX_STATS.out.stats    // channel: [ val(meta), [ stats ] ]
     flagstat  = SAMTOOLS_SORT_INDEX_STATS.out.flagstat // channel: [ val(meta), [ flagstat ] ]
     idxstats  = SAMTOOLS_SORT_INDEX_STATS.out.idxstats // channel: [ val(meta), [ idxstats ] ]
-    mpileup   = SAMTOOLS_MPILEUP.out.mpileup           // channel: [ val(meta), [ mpileup ] ]
-    versions  = ch_versions                   // channel: [ versions.yml ]
-
+    bed       = COUNT_HOPS.out.bed                     // channel: [ val(meta), [ bed ] ]
+    versions  = ch_versions                            // channel: [ versions.yml ]
 }

@@ -14,12 +14,12 @@
                 "input",
                 "aligner",
                 "barcode_length",
+                "insertion_length",
                 "r1_bc_pattern",
-                "samtools_mpileup_adjust_mq",
-                "min_mapq",
                 "promoter_bed",
                 "background_data",
-                "pileup_stranded"
+                "pileup_stranded",
+                "min_mapq"
             ],
             "properties": {
                 "input": {
@@ -36,6 +36,15 @@
                     "type": "string",
                     "description": "Choose one of {'bwamem2', } to align the reads",
                     "default": "bwamem2"
+                },
+                "bwamem2_index": {
+                    "type": "string",
+                    "default": "None"
+                },
+                "min_mapq": {
+                    "type": "integer",
+                    "default": 10,
+                    "description": "minimum alignment quality (mapq in bam file) read to accept in the bed file which summarizes unique calling cards insertions by barcode"
                 },
                 "barcode_length": {
                     "type": "integer",
@@ -56,16 +65,6 @@
                     "type": "string",
                     "default": "NNNNNXXXXXXXXXXXXXXXXX",
                     "description": "UMI tools style barcode pattern for R2. See UMI tools docs for details"
-                },
-                "samtools_mpileup_adjust_mq": {
-                    "type": "integer",
-                    "default": 50,
-                    "description": "Coefficient for downgrading mapping quality for reads containing excessive mismatches. Samtools recommends 50 for BWA. See Samtools mpileup docs"
-                },
-                "min_mapq": {
-                    "type": "integer",
-                    "description": "Minimum mapping quality for an alignment to be used in pileup. See Samtools mpileup docs",
-                    "default": 10
                 },
                 "promoter_bed": {
                     "type": "string",

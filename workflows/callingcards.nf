@@ -13,7 +13,9 @@ WorkflowCallingcards.initialise(params, log)
 // Check input path parameters to see if they exist
 def checkPathParamList = [ params.input,
                            params.multiqc_config,
-                           params.fasta ]
+                           params.fasta,
+                           params.fasta_index,
+                           params.bwamem2_index ]
 
 for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
 
@@ -97,7 +99,7 @@ workflow CALLINGCARDS {
         ch_versions = ch_versions.mix(SAMTOOLS_INDEX_FASTA.out.versions.first())
         ch_fasta_index = SAMTOOLS_INDEX_FASTA.out.fai
     } else {
-        ch_fasta_index = Channel.fromPath(params.fasta_index)
+        ch_fasta_index = Channel.of(["",params.fasta_index])
     }
 
     //
@@ -137,7 +139,7 @@ workflow CALLINGCARDS {
     // SUBWORKFLOW_6: turn alignments into ccf (modified bed format) which
     //              may be used to quantify hops per TF per promoter region
     // QUANTIFY_HOPS (
-    //     mpileup,
+    //     PROCESS_ALIGNMENTS.out.bed
     //     barcode_length,
     //     promoter_bed,
     //     background_data,
