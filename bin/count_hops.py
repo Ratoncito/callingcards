@@ -56,10 +56,12 @@ def add_read_group_and_tags(bampath, single_end, mapq_filter):
         'chromStart':      [],
         'chromEnd':        [],
         'barcode':         [],
-        'strand':          [],
-        'insert_seq':      [],
-        'aln_flag':        [],
         'aln_mapq':        [],
+        'strand':          [],
+        'tag_count':       [],
+        'insert_seq':      [],
+        'aln_flag':        []
+
     }
 
     outpath = os.path.splitext(os.path.basename(bampath))[0] + ".bed"
@@ -91,16 +93,18 @@ def add_read_group_and_tags(bampath, single_end, mapq_filter):
             d['chromStart'].append(read.get_tag("XI"))
             d['chromEnd'].append(int(read.get_tag("XI")) + len(read.get_tag("XZ")))
             d['barcode'].append(read.get_tag("RG"))
+            d['aln_mapq'].append(read.mapping_quality)
             d['strand'].append('-' if int(read.flag) & 0x10 else "+")
+            d['tag_count'].append(1)
             d['insert_seq'].append(read.get_tag("XZ"))
             d['aln_flag'].append(read.flag)
-            d['aln_mapq'].append(read.mapping_quality)
+
 
     input_bamfile.close()
 
     df = pd.DataFrame(data=d)
 
-    df.to_csv(outpath, sep = "\t")
+    df.to_csv(outpath, sep = "\t", index = False, header = None)
 
 def main(args=None):
     args = parse_args(args)
