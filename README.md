@@ -14,15 +14,6 @@
 [![Follow on Twitter](http://img.shields.io/badge/twitter-%40nf__core-1DA1F2?labelColor=000000&logo=twitter)](https://twitter.com/nf_core)
 [![Watch on YouTube](http://img.shields.io/badge/youtube-nf--core-FF0000?labelColor=000000&logo=youtube)](https://www.youtube.com/c/nf-core)
 
-## Development notes
-
-There are subtle, idiosyncratic and frustrating details regarding
- [samtools mpileup](http://www.htslib.org/doc/samtools-mpileup.html),
-[bcftools mpileup](https://samtools.github.io/bcftools/bcftools.html#mpileup)
--- samtools mpileup is essentially deprecated in favor of this -- and
-[samtools depth](http://www.htslib.org/doc/samtools-depth.html)
-(see, in particular, the notes at the bottom). I've so far kept samtools mpileup,
-but should likely switch to either bcftools mpileup or samtools depth.
 ## DEVELOPMENT INSTALLATION
 
 You will need the following two pieces of software to run this pipeline:

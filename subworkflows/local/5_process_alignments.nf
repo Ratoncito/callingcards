@@ -47,5 +47,4 @@ workflow PROCESS_ALIGNMENTS {
     idxstats  = SAMTOOLS_SORT_INDEX_STATS.out.idxstats // channel: [ val(meta), [ idxstats ] ]
     bed       = COUNT_HOPS.out.bed                     // channel: [ val(meta), [ bed ] ]
     versions  = ch_versions                            // channel: [ versions.yml ]
-
 }
