@@ -34,6 +34,7 @@ process ADD_RG_AND_TAGS {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
+        python: \$(python --version | sed 's/Python //g')
         pysam: \$(pip freeze | grep pysam | sed 's/pysam==//g')
     END_VERSIONS
 

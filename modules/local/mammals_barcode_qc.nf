@@ -1,4 +1,4 @@
-process COUNT_HOPS {
+process MAMMAL_BARCODE_QC {
 
     tag "$meta.id"
     label "process_low"
@@ -10,22 +10,25 @@ process COUNT_HOPS {
 
     input:
     tuple val(meta), path(bed)
-    path bai
-    val min_mapq
+    path(barcode_components)
+    path(barcode_component_indicies)
+    val insert_seq
+
 
     output:
-    tuple val(meta), path("*.bed"), emit: bed
-    path  "versions.yml"          , emit: versions
+    tuple val(meta), path("*_bc_fltr.bed"), emit: // [val(meta), path(bed) ]
+    path("*_tally.tsv"),                  , emit: // [ val(mega), path(tally)]
+    path("*_ppm.tsv"),                    , emit: // [ val(mega), path(ppm)]
+    path  "versions.yml"                  , emit: versions
 
-    script: // see nf-core-callingcards/bin/count_hops.py
-    def single_end = meta.single_end ? 1 : 0
+    script: // see nf-core-callingcards/bin/mammals_barcode_qc.py
     """
-        count_hops.py $bed $single_end $min_mapq
+        mammal_barcode_qc.py $bed $barcode_components \
+                             $barcode_components_indicies $insert_seq
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         python: \$(python --version | sed 's/Python //g')
-        pysam: \$(pip freeze | grep pysam | sed 's/pysam==//g')
         pandas: \$(pip freeze | grep pandas | sed 's/pysam==//g')
     END_VERSIONS
 
