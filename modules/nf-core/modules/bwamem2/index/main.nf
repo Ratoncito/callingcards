@@ -1,6 +1,6 @@
 process BWAMEM2_INDEX {
     tag "$fasta"
-    label 'process_high'
+    label 'process_high_memory'
 
     conda (params.enable_conda ? "bioconda::bwa-mem2=2.2.1" : null)
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?

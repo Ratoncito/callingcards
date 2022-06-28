@@ -13,7 +13,7 @@ WorkflowCallingcards.initialise(params, log)
 // Check input path parameters to see if they exist
 def checkPathParamList = [ params.input,
                            params.multiqc_config,
-                           params.fasta,
+                        //    params.fasta,
                            params.fasta_index,
                            params.bwamem2_index ]
 
@@ -41,12 +41,11 @@ ch_multiqc_custom_config = params.multiqc_config ? Channel.fromPath(params.multi
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
 //
 include { INPUT_CHECK            } from '../subworkflows/local/1_input_check'
-include { SAMTOOLS_INDEX_FASTA  } from '../subworkflows/nf-core/2_samtools_index_fasta'
+include { SAMTOOLS_INDEX_FASTA   } from '../subworkflows/nf-core/2_samtools_index_fasta'
 include { UMITOOLS_FASTQC        } from '../subworkflows/nf-core/3_umitools_fastqc'
 include { ALIGN                  } from '../subworkflows/local/4_align'
 include { PROCESS_ALIGNMENTS     } from '../subworkflows/local/5_process_alignments'
-include { QUANTIFY_HOPS          } from '../subworkflows/local/6_quantify_hops'
-include { PROCESS_QUANTIFICATION } from '../subworkflows/local/7_process_quantification'
+include { PROCESS_HOPS           } from '../subworkflows/local/6_process_hops'
 
 /*
 ========================================================================================
@@ -138,13 +137,10 @@ workflow CALLINGCARDS {
     //
     // SUBWORKFLOW_6: turn alignments into ccf (modified bed format) which
     //              may be used to quantify hops per TF per promoter region
-    // QUANTIFY_HOPS (
-    //     PROCESS_ALIGNMENTS.out.bed
-    //     barcode_length,
-    //     promoter_bed,
-    //     background_data,
-    //     pileup_stranded
-    // )
+    PROCESS_HOPS (
+        PROCESS_ALIGNMENTS.out.bed,
+        INPUT_CHECK.out.barcode_details
+    )
 
     //
     // SUBWORKFLOW_7: calculate statistics and other metrics relating to the hops

@@ -1,9 +1,0 @@
-{
-    "om_pb":   ["TAG"],
-    "pb_lrt1": ["CGTCAATTTTACGCAGACTATCTTT"],
-    "srt":     ["CTAG", "CAAC", "CTGA", "GCAT", "GTAC", "CACA", "TGAC", "GTCA",
-                "CGAT", "CTCT", "GAAG", "TCGA", "CATG", "GTTG", "CTTC", "GCTA",
-                "GAGA", "GTGT", "CGTA", "TGGT", "GGAA", "ACAC", "TCAG", "TTGG",
-                "CAGT", "TTTT"],
-    "pb_lrt2": ["GGTTAA"]
-}

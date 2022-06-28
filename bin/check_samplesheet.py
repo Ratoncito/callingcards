@@ -5,8 +5,6 @@ modified by: chase mateusiak 20220126
 Check sample sheet input for accuracy. Only slightly modified from the nf-co template
 """
 
-# TODO check that the barcode file is actually a tsv/csv (whatever i decide it should be)
-
 import os
 import sys
 import errno
@@ -50,8 +48,8 @@ def check_samplesheet(file_in, file_out):
     This function checks that the samplesheet follows the following structure:
 
     sample,fastq_1,fastq_2,barcodes_path
-    sample1,sample1_R1.fastq.gz,sample1_R2.fastq.gz,sample1_barcodes.tsv
-    sample2,sample2_R1.fastq.gz,sample2_R2.fastq.gz,sample2_barcodes.tsv
+    sample1,sample1_R1.fastq.gz,sample1_R2.fastq.gz,barcode_details.json
+    sample2,sample2_R1.fastq.gz,sample2_R2.fastq.gz,barcode_details.json
     """
 
     sample_mapping_dict = {}
@@ -59,7 +57,7 @@ def check_samplesheet(file_in, file_out):
 
         ## Check header
         MIN_COLS = 2
-        HEADER = ["sample", "fastq_1", "fastq_2", "barcodes"]
+        HEADER = ["sample", "fastq_1", "fastq_2", "barcode_details"]
         header = [x.strip('"') for x in fin.readline().strip().split(",")]
         if header[: len(HEADER)] != HEADER:
             print("ERROR: Please check samplesheet header -> {} != {}".format(",".join(header), ",".join(HEADER)))
@@ -85,7 +83,7 @@ def check_samplesheet(file_in, file_out):
                 )
 
             ## Check sample name entries
-            sample, fastq_1, fastq_2, barcodes = lspl[: len(HEADER)]
+            sample, fastq_1, fastq_2, barcode_details = lspl[: len(HEADER)]
             sample = sample.replace(" ", "_")
             if not sample:
                 print_error("Sample entry has not been specified!", "Line", line)
@@ -101,20 +99,20 @@ def check_samplesheet(file_in, file_out):
                             "Line",
                             line,
                         )
-            ## Check that barcodes
-            barcodes = barcodes.replace(" ", "_")
-            if not barcodes and not barcodes.endswith("tsv"):
+            ## Check that barcode_details
+            barcode_details = barcode_details.replace(" ", "_")
+            if not barcode_details and not barcode_details.endswith("json"):
                 print_error("The barcodes file must exist for every sample, \
-                    and it must be a tsv file with extension tsv", "Line", line)
+                    and it must be a json file with extension json", "Line", line)
 
             ## make list of the three validated items associated with each sample
             ## Auto-detect paired-end/single-end
             ## cite: nf-core/rnaseq/check_samplesheet.csv
             sample_info = []  ## [single_end, fastq_1, fastq_2, strandedness]
             if sample and fastq_1 and fastq_2:  ## Paired-end short reads
-                sample_info = ["0", fastq_1, fastq_2, barcodes]
+                sample_info = ["0", fastq_1, fastq_2, barcode_details]
             elif sample and fastq_1 and not fastq_2:  ## Single-end short reads
-                sample_info = ["1", fastq_1, fastq_2, barcodes]
+                sample_info = ["1", fastq_1, fastq_2, barcode_details]
             else:
                 print_error("Invalid combination of columns provided!", "Line", line)
 
@@ -132,7 +130,7 @@ def check_samplesheet(file_in, file_out):
         out_dir = os.path.dirname(file_out)
         make_dir(out_dir)
         with open(file_out, "w") as fout:
-            fout.write(",".join(["sample", "single_end", "fastq_1", "fastq_2", "barcodes"]) + "\n")
+            fout.write(",".join(["sample", "single_end", "fastq_1", "fastq_2", "barcode_details"]) + "\n")
             for sample in sorted(sample_mapping_dict.keys()):
 
                 ## Check that multiple runs of the same sample are of the same datatype

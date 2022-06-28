@@ -16,36 +16,37 @@
 
 ## DEVELOPMENT INSTALLATION
 
+There has been a somewhat major update -- ccf files are created now
+(sort of ccf -- some small differences in order to comply
+with [bed format standards here](https://github.com/samtools/hts-specs/blob/master/BEDv1.pdf) ),
+and I am not aggregating inserts until the following step, as yet unwritten, where inserts
+will be aggregated over promoter regions. Some QC files are also produced. Output is
+in the directories:
+  - `count`: only the 'raw' bed file, no filtering or QC
+  - `barcode`: filtered bed files (so only those rows which match barcode and insertion site expectation) along and a bunch of QC files.
+
+The names of these directories are place holders (just what is produced by default)
+-- not what I would suggest they be named.
+
 You will need the following two pieces of software to run this pipeline:
 
 1. [Nextflow](https://www.nextflow.io/)
 2. One of: [Singularity](https://sylabs.io/singularity/), [Docker](https://www.docker.com/) or [conda](https://docs.conda.io/en/latest/) (singularity or docker are far preferred)
 
-AND, you will need to download [git lfs](https://git-lfs.github.com/) in order to
-fully clone this repository. This is not a good way of doing the test data, but
-until I curtail the chr1 fasta file, it is how I am doing it.
-If you are on a linux system that you own, do this:
+You no longer need `git lfs`. BUT, the test profiles pull from iGenomes now. As
+a result, the indexing step for the human genome, if you do not provide a bwamem2
+index as an additional parameter, takes up to ~60GB. Remember you only need to
+do this once, and while this can run on a local computer reasonably quickly
+even for full size fastq files, it isn't reasonable to expect that the index
+can be created on a local computer. In any case, if you don't want to deal with
+creating an index for the human genome, try the yeast test profile instead with
+`test_yeast`. The genome is smaller and I believe takes less than 14GB to index.
 
-```
-$ sudo apt update
-$ sudo apt install git-lfs
-$ git lfs install
-```
-On the HTCF cluster, you can do this through `spack`.
+__NOTE__: The issue of where/how this is stored is best handled via a stable
+config file that everyone in the lab uses -- more on this in the next meeting.
 
-If you're using mac, then you can probably substitute `apt` for `brew`. If you're
-using Windows, you should think about the life choices that have brought you to
-this point, and then partition your hard drive and install ubuntu. Or, google
-about and then let me know what works, and I'll update the readme.
 
-Alternatively, email me, and I'll send you a a zipped version of the repo.
-
-Note: it isn't necessary to make the cc_tester directory -- call it whatever you
-like, or do this differently. Just make sure the path in the run script below
-points to the main.nf file in the callingcards repo.
-
-Assuming you have git lfs, then clone the repo.
-
+To run the tests, the steps are the same:
 ```
 $ mkdir cc_tester
 # you could download/install the nextflow executable in this directory
@@ -61,7 +62,8 @@ Next, copy and paste the script below into a file called, for example, `run_nf.s
 mkdir tmp
 
 # CHOOSE ONE OF SINGULARITY, DOCKER OR CONDA. I haven't tested docker. It probably works
-nextflow run callingcards/main.nf  -profile test_human,<singularity/docker/conda> -resume
+# CHOOSE EITHER test_human or test_yeast
+nextflow run callingcards/main.nf  -profile <test_human, test_yeast>,<singularity/docker/conda> -resume
 
 ```
 Note that this assumes that nextflow is either in your `$PATH`, or the executable is
@@ -72,6 +74,9 @@ Make the script executable (on a linux system, `chmod +x run_nf.sh`) and then la
 ```
 ./run_nf.sh
 ```
+__Warning__: I haven't looked at the test_slurm and test_sge profiles since
+I made this major update (different genome paths, adding the ccf modules, etc).
+They may work, but they may not.
 
 You could just execute the line in the runscript, but if there are errors, I'll ask to see the
 submission command -- saving the run command is useful for debugging.
@@ -119,44 +124,6 @@ mkdir tmp
 nextflow run callingcards/main.nf  -profile test_sge,conda -resume
 
 ```
-
-### yeast data
-
-A test profile for yeast hasn't yet been created, but this will handle yeast (paired or single end data, with barcodes either only on the first read, or on both reads) data through the pile up, also. Here is an example of what a params file, and the input sheet, would look like:
-
-params.json
-```
-{
-  "input":"input_samplesheet.csv",
-  "aligner":"bwamem2",
-  "fasta":"\/home\/oguzkhan\/ref\/S288C_R64\/GCF_000146045.2_R64_genomic.fa",
-  "r1_bc_pattern":"NNNNNXXXXXXXXXXXXXXXXX",
-  "r2_bc_pattern":"NNNNNNNNXXXX",
-  "barcode_length": 13,
-  "min_mapq": 10,
-  "promoter_bed": "\/home\/oguzkhan\/Desktop\/tmp\/cc_tester\/rmlab_notOrf.bed",
-  "background_data": "\/home\/oguzkhan\/Desktop\/tmp\/cc_tester\/old_testin\/NOTF_Minus_Adh1_2015_17_combined_chase_edit.csv",
-  "pileup_stranded": "FALSE"
-}
-
-```
-
-input_sheet.csv
-```
-sample,fastq_1,fastq_2,barcodes
-run_5399,run_5399/PhiX_S1_R1_001.fastq.gz,run_5399/PhiX_S1_R2_001.fastq.gz,/home/oguzkhan/Desktop/tmp/cc_tester/old_testing/run_5399_demult_barcodes.tsv
-
-```
-And this is what demult barcode looks like for this run:
-
-```
-MIG2	TCAGTCCCGTTGG
-CAT8	GCCTGGGCGGCAG
-GLN3	ATTTGGGGGGGGT
-ARO80	TTGGTGGGGGTAG
-CBF1	CTCGGTCGTCAGT
-```
-If you want to test the pipeline on yeast data, it is likely best just to let me know and let me help get it started (until I get a test profile made, at which point, it will be like above, where you can just use the profile 'test_yeast' rather than 'test_human')
 
 # IGNORE EVERYTHING BELOW
 ## Introduction

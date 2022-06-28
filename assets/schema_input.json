@@ -29,11 +29,25 @@
                         "maxLength": 0
                     }
                 ]
-            }
+            },
+            "barcode_details": {
+                "errorMessage": "barcode details must be a json file with extension '.json'",
+                "anyOf": [
+                    {
+                        "type": "string",
+                        "pattern": "^\\S+\\.json$"
+                    },
+                    {
+                        "type": "string",
+                        "maxLength": 0
+                    }
+                ]
+            },
         },
         "required": [
             "sample",
-            "fastq_1"
+            "fastq_1",
+            "barcode_details"
         ]
     }
 }
