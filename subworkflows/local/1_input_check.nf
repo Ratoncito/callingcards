@@ -21,8 +21,8 @@ workflow INPUT_CHECK {
         .set { out }
 
     emit:
-    reads = out.reads
-    barcode_details = out.barcode_details     // channel: [ val(meta), [ reads ], file(barcode_details.json) ]
+    reads = out.reads                         // channel: [ val(meta), [ file(r1 fastq), file(f2_fastq)* depending on input ]]
+    barcode_details = out.barcode_details     // channel: [ val(meta), file(barcode_details.json) ]
     versions = SAMPLESHEET_CHECK.out.versions // channel: [ versions.yml ]
 }
 
@@ -59,6 +59,9 @@ def create_fastq_channel(LinkedHashMap row) {
     return fastq_meta
 }
 
+// Like create_fastq_channel, this parses a row of the input sample sheet
+// and returns an array where the first item is a map of metadata,
+// and the second item is the barcode_details.json as a file object
 def create_barcode_details_channel(LinkedHashMap row){
     def meta = [:]
     def barcode_details_arr = []

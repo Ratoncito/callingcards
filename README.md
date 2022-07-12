@@ -14,6 +14,12 @@
 [![Follow on Twitter](http://img.shields.io/badge/twitter-%40nf__core-1DA1F2?labelColor=000000&logo=twitter)](https://twitter.com/nf_core)
 [![Watch on YouTube](http://img.shields.io/badge/youtube-nf--core-FF0000?labelColor=000000&logo=youtube)](https://www.youtube.com/c/nf-core)
 
+## NOTE
+Need to look at yeast count_hops -- in the original make_ccf.py file, the check
+on the reverse and forward strand may not be equivalent -- the reverse checks
+that the read is exactly the right length. the forward just checks that it starts
+at read position 0
+
 ## DEVELOPMENT INSTALLATION
 
 There has been a somewhat major update -- ccf files are created now

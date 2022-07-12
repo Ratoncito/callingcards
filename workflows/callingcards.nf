@@ -1,7 +1,7 @@
 /*
-========================================================================================
+================================================================================
     VALIDATE INPUTS
-========================================================================================
+================================================================================
 */
 
 def summary_params = NfcoreSchema.paramsSummaryMap(workflow, params)
@@ -17,40 +17,51 @@ def checkPathParamList = [ params.input,
                            params.fasta_index,
                            params.bwamem2_index ]
 
-for (param in checkPathParamList) { if (param) { file(param, checkIfExists: true) } }
+for (param in checkPathParamList) {
+    if (param) {
+        file(param, checkIfExists: true)
+    }
+}
 
 // Check mandatory parameters
-if (params.input) { ch_input = file(params.input) } else { exit 1, 'Input samplesheet not specified!' }
+if (params.input) {
+    ch_input = file(params.input)
+} else {
+    exit 1, 'Input samplesheet not specified!'
+}
 
 /*
-========================================================================================
+================================================================================
     CONFIG FILES
-========================================================================================
+================================================================================
 */
 
-ch_multiqc_config        = file("$projectDir/assets/multiqc_config.yaml", checkIfExists: true)
-ch_multiqc_custom_config = params.multiqc_config ? Channel.fromPath(params.multiqc_config) : Channel.empty()
+ch_multiqc_config        = file("$projectDir/assets/multiqc_config.yaml",
+                            checkIfExists: true)
+ch_multiqc_custom_config = params.multiqc_config ?
+                            Channel.fromPath(params.multiqc_config) :
+                            Channel.empty()
 
 /*
-========================================================================================
+================================================================================
     IMPORT LOCAL MODULES/SUBWORKFLOWS
-========================================================================================
+================================================================================
 */
 
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
 //
-include { INPUT_CHECK            } from '../subworkflows/local/1_input_check'
-include { SAMTOOLS_INDEX_FASTA   } from '../subworkflows/nf-core/2_samtools_index_fasta'
-include { UMITOOLS_FASTQC        } from '../subworkflows/nf-core/3_umitools_fastqc'
-include { ALIGN                  } from '../subworkflows/local/4_align'
-include { PROCESS_ALIGNMENTS     } from '../subworkflows/local/5_process_alignments'
-include { PROCESS_HOPS           } from '../subworkflows/local/6_process_hops'
+include { INPUT_CHECK          } from '../subworkflows/local/1_input_check'
+include { SAMTOOLS_INDEX_FASTA } from '../subworkflows/nf-core/2_samtools_index_fasta'
+include { UMITOOLS_FASTQC      } from '../subworkflows/nf-core/3_umitools_fastqc'
+include { ALIGN                } from '../subworkflows/local/4_align'
+include { PROCESS_ALIGNMENTS   } from '../subworkflows/local/5_process_alignments'
+include { PROCESS_HOPS         } from '../subworkflows/local/6_process_hops'
 
 /*
-========================================================================================
+================================================================================
     IMPORT NF-CORE MODULES/SUBWORKFLOWS
-========================================================================================
+================================================================================
 */
 
 //
@@ -61,9 +72,9 @@ include { MULTIQC                     } from '../modules/nf-core/modules/multiqc
 include { CUSTOM_DUMPSOFTWAREVERSIONS } from '../modules/nf-core/modules/custom/dumpsoftwareversions/main'
 
 /*
-========================================================================================
+================================================================================
     RUN MAIN WORKFLOW
-========================================================================================
+================================================================================
 */
 
 // Info required for completion email and summary
@@ -182,9 +193,9 @@ workflow CALLINGCARDS {
 }
 
 /*
-========================================================================================
+================================================================================
     COMPLETION EMAIL AND SUMMARY
-========================================================================================
+================================================================================
 */
 
 workflow.onComplete {
@@ -195,7 +206,7 @@ workflow.onComplete {
 }
 
 /*
-========================================================================================
+================================================================================
     THE END
-========================================================================================
+================================================================================
 */

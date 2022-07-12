@@ -49,14 +49,21 @@ def barcode_qc(bed_df,
                barcode_details,
                fltr_bed_output_name):
     """parse the calling cards bed file name column into components and perform
-    QC. Write a number of QC tables, as well as a bed file filtered down to
-    only expected barcodes, to file.
+    This expects a dataframe with AT LEAST the columns (there may be more):
+    ['chrom','chromStart','chromEnd','barcode', 'strand', 'insert_seq']
 
     :param bed_df:
     :param barcode_details:
     :param fltr_bed_output_name:
 
     """
+
+    # fields by which to group and count transpositions. Not that in the case
+    # of pooled barcodes, this occurs after splitting into individual barcode
+    # tables
+    coordinate_grouping_fields = ['chrom','chromStart','chromEnd','strand']
+    # ccf fields and order
+    ccf_col_order = ['chrom', 'chromStart', 'chromEnd', 'reads', 'strand']
 
     # Using the keys of the barcode_components dict, make a dictionary
     # with structure {component1: [], component2:[], ...} where the keys are
@@ -65,7 +72,7 @@ def barcode_qc(bed_df,
 
     # iterate over the barcodes in the 'name' column of the cc bed file
     # and parse the barcode into the barcode components
-    for barcode in bed_df.iloc[:,3]:
+    for barcode in bed_df.loc[:,'barcode']:
         [barcode_vector_dict[k].append(barcode[v[0]:v[1]]) \
         for k,v in barcode_details['indicies'].items()]
 
@@ -74,7 +81,7 @@ def barcode_qc(bed_df,
 
     # create position probability matricies of the barcode components
     barcode_components_ppm(barcode_vector_dict)
-    barcode_components_ppm({'insert_seq': bed_df.iloc[:,5]})
+    barcode_components_ppm({'insert_seq': bed_df.loc[:,'insert_seq']})
 
     # transform barcode_vector_dict to a dataframe
     barcode_component_df = pd.DataFrame(data=barcode_vector_dict)
@@ -86,7 +93,7 @@ def barcode_qc(bed_df,
     # group by the srt column and count how many of each unique srt seq
     # there is)
     counts_of_barcode_variety(barcode_component_df)
-    counts_of_barcode_variety(pd.DataFrame({'insert_seq': bed_df.iloc[:,5]}))
+    counts_of_barcode_variety(pd.DataFrame({'insert_seq': bed_df.loc[:,'insert_seq']}))
 
     # In the following section, create a vector to filter out
     # barcodes which do not meet barcode expectation OR!! the insert sequence
@@ -109,7 +116,7 @@ def barcode_qc(bed_df,
             # if there is a specific insert seq on which to filter, also
             # exclude reads that don't match it
             try:
-                if not bed_df.iloc[index,7] in barcode_details['insert_seq']:
+                if not bed_df.loc[index,'insert_seq'] in barcode_details['insert_seq']:
                     keep_index = False
             except KeyError:
                 pass
@@ -126,7 +133,7 @@ def barcode_qc(bed_df,
         barcode_map = pd.DataFrame(barcode_details['tf_map'])
         # group by TF. If there is more than one field to group on, add to the
         # list
-        grouping_fields = ["TF"]
+        barcode_grouping_fields = ["TF"]
         # row filter, join, transform mismatches to 'other'
         barcode_to_tf_df = pd.merge(barcode_component_df,barcode_map,
                         how = 'left',
@@ -134,15 +141,21 @@ def barcode_qc(bed_df,
         col_list.append("TF")
         grouped_bed = pd.concat([bed_df, barcode_to_tf_df], axis=1)[col_list]\
                         .fillna({'TF':"other"})\
-                        .groupby(grouping_fields)
+                        .groupby(barcode_grouping_fields)
 
         # output each grouped sheet with the name of the group in the filename
-        for grouping_fields,fltr_df in grouped_bed:
-            group_name = grouping_fields if type(grouping_fields) is str \
-                else "_".join(grouping_fields)
+        for barcode_grouping_fields,fltr_df in grouped_bed:
+            group_name = barcode_grouping_fields \
+                if type(barcode_grouping_fields) is str \
+                else "_".join(barcode_grouping_fields)
             fltr_df\
-                .sort_values(by=col_list[0:2])\
-                .to_csv(fltr_bed_output_name+"_"+group_name + "_bc_fltr.bed",
+                .value_counts(coordinate_grouping_fields+['TF'])\
+                .to_frame()\
+                .sort_values(coordinate_grouping_fields)\
+                .reset_index()\
+                .rename(columns = {0:'reads'})\
+                .reindex(ccf_col_order)\
+                .to_csv(fltr_bed_output_name+"_"+group_name + "_bc_fltr.ccf",
                             sep = "\t",
                             header = None,
                             index = False)
@@ -150,8 +163,13 @@ def barcode_qc(bed_df,
     # table
     except KeyError:
         bed_df[barcode_fltr_vector]\
-            .sort_values(by=col_list[0:2])\
-            .to_csv(fltr_bed_output_name+"_bc_fltr.bed",
+            .value_counts(coordinate_grouping_fields)\
+            .to_frame()\
+            .sort_values(coordinate_grouping_fields)\
+            .reset_index()\
+            .rename(columns = {0:'reads'})\
+            .reindex(ccf_col_order)\
+            .to_csv(fltr_bed_output_name+"_bc_fltr.ccf",
                                         sep = "\t",
                                         header = None,
                                         index = False)
@@ -247,7 +265,10 @@ def main(args=None):
         if not os.path.exists(input_path):
             raise FileNotFoundError("Input file DNE: %s" %input_path)
 
-    bed_df = pd.read_csv(args.bed_path, sep = "\t", header = None)
+    bed_colnames = ['chrom','chromStart','chromEnd','barcode','aln_mapq',
+                    'strand', 'reads', 'insert_seq', 'aln_flag']
+
+    bed_df = pd.read_csv(args.bed_path, sep = "\t", names=bed_colnames)
 
     with open(args.barcode_details) as f1:
         barcode_details = json.load(f1)

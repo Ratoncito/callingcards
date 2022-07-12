@@ -58,7 +58,7 @@ def add_read_group_and_tags(bampath, single_end, mapq_filter):
         'barcode':         [],
         'aln_mapq':        [],
         'strand':          [],
-        'tag_count':       [],
+        'reads':           [],
         'insert_seq':      [],
         'aln_flag':        []
 
@@ -95,7 +95,7 @@ def add_read_group_and_tags(bampath, single_end, mapq_filter):
             d['barcode'].append(read.get_tag("RG"))
             d['aln_mapq'].append(read.mapping_quality)
             d['strand'].append('-' if int(read.flag) & 0x10 else "+")
-            d['tag_count'].append(1)
+            d['reads'].append(1)
             d['insert_seq'].append(read.get_tag("XZ"))
             d['aln_flag'].append(read.flag)
 
