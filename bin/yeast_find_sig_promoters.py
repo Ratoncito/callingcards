@@ -8,6 +8,7 @@
 """
 
 # standard lib
+from inspect import Attribute
 import sys
 import argparse
 from os.path import exists
@@ -75,6 +76,13 @@ def create_db_table(con, df, tbl_details_dict):
         logging.critical(msg+" ", exc_info=(sys.exc_info()))
         raise
 
+    df.to_sql(tbl_details_dict.get('tablename'),
+              con=con,
+              if_exists='append',
+              index=False)
+
+
+
 def create_hop_view(con, tablename, view_name):
     """Create view where hops are aggregated by chrom, pos and strand
 
@@ -115,22 +123,42 @@ def create_hop_view(con, tablename, view_name):
         logging.critical(msg+" ", exc_info=(sys.exc_info()))
         raise
 
+def standardize_chr_names(df,chr_map_df, standard_chr_format):
+    """_summary_
 
-def parse_args(args=None):
-    Description = "Examine hop barcodes, output some QC metrics, and a bed file \
-        which matches the columns in the input bed, but is row filtered for only \
-            those reads which meet barcode expectations"
-    Epilog = "Example usage: python mammal_barcode_qc.py \
-        <cc_format_bedfile.bed> <barcode_details.json>"
+    :param df: _description_
+    :type df: _type_
+    :param chr_map_df: _description_
+    :type chr_map_df: _type_
+    :param standardized_chr_format: _description_
+    :type standard_chr_format: _type_
+    :return: _description_
+    :rtype: _type_
+    """
 
-    parser = argparse.ArgumentParser(description=Description, epilog=Epilog)
-    parser.add_argument("bed_path",
-                         help="path to the input bam file")
-    parser.add_argument("barcode_details",
-                         help="A json which describes components of the barcode \
-                            which occurs in the name column of the calling cards \
-                                bed file format")
-    return parser.parse_args(args)
+    # determine which name format the dataframe currently uses
+    curr_chrom_format = -1
+    for chr_format in chr_map_df.columns:
+        if sum([True if x in chr_map_df[chr_format].unique() else False \
+            for x in df['chrom'].unique()]) == len(df['chrom'].unique()):
+            curr_chrom_format = chr_format
+            break
+    # raise an error if a format did not match
+    if curr_chrom_format == -1:
+        AttributeError("Chromosome names are not recognized in a recognized format")
+
+    # if the current names are refseq, return
+    if curr_chrom_format == standard_chr_format:
+        return df
+    # else, use the chr_map_df to map to the standardized_chr_format convention
+    else:
+        return pd.merge(df, chr_map_df[[curr_chrom_format,'refseq']],
+                        how = 'left',
+                        left_on = 'chrom',
+                        right_on = curr_chrom_format)\
+                        .drop(['chrom', curr_chrom_format], axis=1)\
+                        .rename(columns = {'refseq':'chrom'})\
+                        [df.columns]
 
 def parse_args(args=None):
     Description = "create a sqlite database with background and expression data " +\
@@ -146,18 +174,28 @@ def parse_args(args=None):
                          help="path` to the background data table")
     parser.add_argument("experimental_ccf_path",
                          help="path to the experimental data table")
+    parser.add_argument("chr_map",
+                         help="a csv which maps between various "+\
+                            "chromosome naming conventions, eg ucsc, ignomes " +\
+                                "and refseq")
+    parser.add_argument("standard_chr_format",
+                        help="this must be one of the column names in "+\
+                            "the chr_map. All chromosome identifiers will be "+\
+                                "translated to this naming convention. "+\
+                                    "default is 'refseq'", default="refseq")
 
     return parser.parse_args(args)
 
 def main(args=None):
     args = parse_args(args)
 
+    PROMOTER_BED_COLNAMES = ["chrom", "chromStart", "chromEnd", "name", "score", "strand"]
     CCF_COLNAMES = ['chrom', 'chromStart', 'chromEnd', 'reads', 'strand']
     INDEX_COL_STRING = '("chrom", "chromStart" ASC, "chromEnd" ASC, "strand");'
 
     con = sqlite3.connect(':memory:')
     promoter_dict = {
-        'colnames': ["chrom", "chromStart", "chromEnd", "name", "score", "strand"],
+        'colnames': PROMOTER_BED_COLNAMES,
         'tablename': "promoters",
         'index_name': "promoter_index",
         'index_col_string': INDEX_COL_STRING
@@ -179,6 +217,13 @@ def main(args=None):
         'index_col_string': INDEX_COL_STRING
     }
 
+    if not exists(args.chr_map):
+        raise FileExistsError('File Not Found: %s' %args.chr_map)
+    else:
+        chr_map_df = pd.read_csv(args.chr_map)
+        if not args.standard_chr_format in chr_map_df.columns:
+            raise AttributeError('Standard chr format not in chr_map columns')
+
     # create promoter, background and experiment tables
     if not exists(args.promoter_table_path):
         raise FileExistsError("File Not Found: %s" %args.promoter_table_path)
@@ -186,11 +231,10 @@ def main(args=None):
         promoter_df = pd.read_csv(args.promoter_table_path,
                                   sep = "\t",
                                   names = promoter_dict.get('colnames'))
-        try:
-            create_db_table(con, promoter_df, promoter_dict)
-        except SystemExit(1):
-            msg = 'Error'
-            logging.critical(msg+" ", exc_info=(sys.exec_info()))
+        promoter_df = standardize_chr_names(promoter_df,
+                                            chr_map_df,
+                                            args.standard_chr_format)
+        create_db_table(con, promoter_df, promoter_dict)
         del promoter_df
 
     if not exists(args.background_data_path):
@@ -199,7 +243,10 @@ def main(args=None):
         background_df = pd.read_csv(args.background_data_path,
                                      sep = "\t",
                                      names = background_dict.get('colnames'))
-        create_db_table(con, background_df, promoter_dict)
+        background_df = standardize_chr_names(background_df,
+                                            chr_map_df,
+                                            args.standard_chr_format)
+        create_db_table(con, background_df, background_dict)
         del background_df
 
     if not exists(args.experimental_data_path):
@@ -207,15 +254,23 @@ def main(args=None):
     else:
         experimental_df = pd.read_csv(args.experimental_data_path,
                                   sep = "\t",
-                                  names = experimental_dict.get('colnames'))
+                                  names = experimental_dict.get('colnames')
+        experimental_df = = standardize_chr_names(experimental_df,
+                                                  chr_map_df,
+                                                  args.standard_chr_format)
         create_db_table(con, experimental_df, experimental_dict)
         del experiment_df
 
-    # create hop view
-    create_hop_view(con, background_dict.tablename, background_dict.view_name)
-    create_hop_view(con, experimental_dict.tablename, experimental_dict.view_name)
+    # create background hop view
+    create_hop_view(con,
+                    background_dict.tablename,
+                    background_dict.view_name)
+    # create experimental hop view
+    create_hop_view(con,
+                    experimental_dict.tablename,
+                    experimental_dict.view_name)
 
-    bg_df    = pd.read_sql_query("SELECT * FROM %s"
+    bg_df   = pd.read_sql_query("SELECT * FROM %s"
                                 %background_dict.get('view_name'), con)
     expr_df = pd.read_sql_query("SELECT * FROM %s"
                                 %experimental_dict.get('view_name'), con)

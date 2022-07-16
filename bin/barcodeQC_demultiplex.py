@@ -28,6 +28,19 @@ import json
 # outside dependencies
 import pandas as pd
 
+BED_6_3_COLNAMES = ['chrom', 'chromStart', 'chromEnd',
+                    'barcode', 'aln_mapq', 'strand',
+                    'reads', 'insert_seq', 'aln_flag']
+
+# fields by which to group and count transpositions. Not that in the case
+# of pooled barcodes, this occurs after splitting into individual barcode
+# tables
+COORDINATE_GROUPING_FIELDS = ['chrom','chromStart','chromEnd','strand']
+# ccf fields and order
+CCF_COL_ORDER = ['chrom', 'chromStart', 'chromEnd', 'reads', 'strand']
+
+# NOTE that there is some hard coding with regards to the fields/keys of
+# the barcode to TF mapping fields (this is for yeast right now)
 
 def parse_args(args=None):
     Description = "Examine hop barcodes, output some QC metrics, and a bed file \
@@ -45,6 +58,37 @@ def parse_args(args=None):
                                 bed file format")
     return parser.parse_args(args)
 
+def aggregate_hops(df, coordinate_grouping_fields, ccf_col_order):
+    """aggregate a ccf-style bed format dataframe. Note that this expects that
+    the column with number of reads at a give spot be called 'reads'
+
+    :param df: a ccf-ctyle bed format dataframe
+    :type df: pandas DataFrame
+    :param coordinate_grouping_fields: list of fields by which to group
+    :type coordinate_grouping_fields: list
+    :param ccf_col_order: order of columns in return dataframe
+    :type ccf_col_order: list
+
+    :returns: an aggregated dataframe in expected ccf col order
+    :rtype: pandas DataFrame
+    """
+
+    if not sum([True if x in df.columns else False \
+        for x in coordinate_grouping_fields]) == len(coordinate_grouping_fields):
+        ValueError('coordinate_grouping_fields not subset of df.columns')
+    elif not sum([True if x in coordinate_grouping_fields else False \
+        for x in ccf_col_order]) == len(ccf_col_order):
+            ValueError('ccf_col_order not in coordinate_grouping_fields')
+
+    agg_df = df\
+        .groupby(coordinate_grouping_fields)['reads']\
+        .agg(['sum'])\
+        .reset_index()\
+        .rename(columns={'sum':'reads'})\
+        [CCF_COL_ORDER]
+
+    return agg_df
+
 def barcode_qc(bed_df,
                barcode_details,
                fltr_bed_output_name):
@@ -57,13 +101,6 @@ def barcode_qc(bed_df,
     :param fltr_bed_output_name:
 
     """
-
-    # fields by which to group and count transpositions. Not that in the case
-    # of pooled barcodes, this occurs after splitting into individual barcode
-    # tables
-    coordinate_grouping_fields = ['chrom','chromStart','chromEnd','strand']
-    # ccf fields and order
-    ccf_col_order = ['chrom', 'chromStart', 'chromEnd', 'reads', 'strand']
 
     # Using the keys of the barcode_components dict, make a dictionary
     # with structure {component1: [], component2:[], ...} where the keys are
@@ -148,13 +185,9 @@ def barcode_qc(bed_df,
             group_name = barcode_grouping_fields \
                 if type(barcode_grouping_fields) is str \
                 else "_".join(barcode_grouping_fields)
-            fltr_df\
-                .value_counts(coordinate_grouping_fields+['TF'])\
-                .to_frame()\
-                .sort_values(coordinate_grouping_fields)\
-                .reset_index()\
-                .rename(columns = {0:'reads'})\
-                .reindex(ccf_col_order)\
+            aggregate_hops(
+                COORDINATE_GROUPING_FIELDS+['TF'],
+                CCF_COL_ORDER)\
                 .to_csv(fltr_bed_output_name+"_"+group_name + "_bc_fltr.ccf",
                             sep = "\t",
                             header = None,
@@ -162,13 +195,10 @@ def barcode_qc(bed_df,
     # if the tf_map slot is not in barcode_details, then just write out a single
     # table
     except KeyError:
-        bed_df[barcode_fltr_vector]\
-            .value_counts(coordinate_grouping_fields)\
-            .to_frame()\
-            .sort_values(coordinate_grouping_fields)\
-            .reset_index()\
-            .rename(columns = {0:'reads'})\
-            .reindex(ccf_col_order)\
+        aggregate_hops(
+            bed_df[barcode_fltr_vector],
+            COORDINATE_GROUPING_FIELDS,
+            CCF_COL_ORDER)\
             .to_csv(fltr_bed_output_name+"_bc_fltr.ccf",
                                         sep = "\t",
                                         header = None,
@@ -265,10 +295,7 @@ def main(args=None):
         if not os.path.exists(input_path):
             raise FileNotFoundError("Input file DNE: %s" %input_path)
 
-    bed_colnames = ['chrom','chromStart','chromEnd','barcode','aln_mapq',
-                    'strand', 'reads', 'insert_seq', 'aln_flag']
-
-    bed_df = pd.read_csv(args.bed_path, sep = "\t", names=bed_colnames)
+    bed_df = pd.read_csv(args.bed_path, sep = "\t", names=BED_6_3_COLNAMES)
 
     with open(args.barcode_details) as f1:
         barcode_details = json.load(f1)

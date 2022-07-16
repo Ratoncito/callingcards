@@ -23,7 +23,7 @@ process BARCODE_QC {
 
     script: // see nf-core-callingcards/bin/mammals_barcode_qc.py
     """
-        barcode_qc.py ${bed} ${barcode_details}
+        barcodeQC_demultiplex.py ${bed} ${barcode_details}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
