@@ -39,7 +39,7 @@ def create_fastq_channel(LinkedHashMap row) {
     def fastq_meta = []
     def fastq_1 = file(row.fastq_1).exists() ?
                     row.fastq_1 :
-                    "${projectDir}/assets/test_data/${row.fastq_1}"
+                    "${projectDir}/${row.fastq_1}"
 
     if (!file(fastq_1).exists()) {
         exit 1, "ERROR: Please check input samplesheet -> Read 1 FastQ file does not exist!\n${row.fastq_1}"
@@ -49,7 +49,7 @@ def create_fastq_channel(LinkedHashMap row) {
     } else {
         def fastq_2 = file(row.fastq_2).exists() ?
                         row.fastq_2 :
-                        "${projectDir}/assets/test_data/${row.fastq_2}"
+                        "${projectDir}/${row.fastq_2}"
 
         if (!file(fastq_2).exists()) {
             exit 1, "ERROR: Please check input samplesheet -> Read 2 FastQ file does not exist!\n${row.fastq_2}"
@@ -69,7 +69,7 @@ def create_barcode_details_channel(LinkedHashMap row){
 
     def barcode_details = file(row.barcode_details).exists() ?
                     row.barcode_details :
-                    "${projectDir}/assets/${row.barcode_details}"
+                    "${projectDir}/${row.barcode_details}"
 
     if (!file(barcode_details).exists()) {
             exit 1, "ERROR: Please check input samplesheet -> Barcode detail does not exist!\n${row.barcode_details}"

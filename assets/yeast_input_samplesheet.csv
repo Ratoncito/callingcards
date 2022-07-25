@@ -1,2 +1,0 @@
-sample,fastq_1,fastq_2,barcode_details
-yeast_test,yeast/yeast_R1.fq.gz,yeast/yeast_R2.fq.gz,yeast_barcode_details.json

@@ -72,6 +72,10 @@ def parse_args(args=None):
                          help="Boolean. True if the bam file is created from \
                             single end reads. May be either a string true/false \
                                 (case doesn't matter) or 1/0")
+    parser.add_argument("require_exact_length",
+                        help="True to filter out any soft-clipped reads, False "+\
+                        "otherwise. Default is False",
+                        default='False')
     parser.add_argument("mapq_filter",
                          help = "minimum value above which to accept alignments")
 
@@ -142,12 +146,16 @@ def add_read_group_and_tags(bampath, single_end,
             # add read to correct dict -- this partitions read1s
             if count_read:
                 try:
-                    passing_reads['chrom'].append(input_bamfile.get_reference_name(read.reference_id))
+                    passing_reads['chrom']\
+                        .append(input_bamfile\
+                            .get_reference_name(read.reference_id))
                     passing_reads['chromStart'].append(read.get_tag("XI"))
-                    passing_reads['chromEnd'].append(int(read.get_tag("XI")) + len(read.get_tag("XZ")))
+                    passing_reads['chromEnd'].append(int(read.get_tag("XI")) +
+                                                     len(read.get_tag("XZ")))
                     passing_reads['barcode'].append(read.get_tag("RG"))
                     passing_reads['aln_mapq'].append(read.mapping_quality)
-                    passing_reads['strand'].append('-' if int(read.flag) & 0x10 else "+")
+                    passing_reads['strand']\
+                        .append('-' if int(read.flag) & 0x10 else "+")
                     passing_reads['reads'].append(1)
                     passing_reads['insert_seq'].append(read.get_tag("XZ"))
                     passing_reads['aln_flag'].append(read.flag)
@@ -159,12 +167,20 @@ def add_read_group_and_tags(bampath, single_end,
                     raise
             else:
                 try:
-                    failing_reads['chrom'].append(input_bamfile.get_reference_name(read.reference_id))
+                    failing_reads['chrom']\
+                        .append(input_bamfile\
+                            .get_reference_name(read.reference_id))
                     failing_reads['chromStart'].append(read.get_tag("XI"))
-                    failing_reads['chromEnd'].append(int(read.get_tag("XI")) + len(read.get_tag("XZ")))
+                    try:
+                        failing_reads['chromEnd'].append(int(read.get_tag("XI")) +
+                                                        len(read.get_tag("XZ")))
+                    except ValueError as e:
+                        print(e)
+                        failing_reads['chromEnd'].append("*")
                     failing_reads['barcode'].append(read.get_tag("RG"))
                     failing_reads['aln_mapq'].append(read.mapping_quality)
-                    failing_reads['strand'].append('-' if int(read.flag) & 0x10 else "+")
+                    failing_reads['strand']\
+                        .append('-' if int(read.flag) & 0x10 else "+")
                     failing_reads['reads'].append(1)
                     failing_reads['insert_seq'].append(read.get_tag("XZ"))
                     failing_reads['aln_flag'].append(read.flag)
@@ -203,14 +219,14 @@ def main(args=None):
             "false": False
         }
 
-        if switcher.get(single_end_uncase, 1) is 1:
+        if switcher.get(single_end_uncase, 1) == 1:
             raise ValueError("Invalid choice for argument single_end: %s. \
                 Must be one of 0,1, true/True/TRUE, false/False/FALSE" %single_end)
         else:
             return switcher.get(single_end_uncase)
 
     single_end = parse_bool(args.single_end)
-
+    require_exact_length = parse_bool(args.require_exact_length)
 
     # Check inputs
     input_path_list = [args.bampath]
@@ -222,6 +238,7 @@ def main(args=None):
     # and the XI and XZ tags
     add_read_group_and_tags(args.bampath,
                             single_end,
+                            require_exact_length,
                             int(args.mapq_filter))
 
     sys.exit(0)

@@ -1,0 +1,2 @@
+sample,fastq_1,fastq_2,barcode_details
+yeast_test,assets/yeast/test_data/R1.fq.gz,assets/yeast/test_data/R2.fq.gz,assets/yeast/barcode_details.json

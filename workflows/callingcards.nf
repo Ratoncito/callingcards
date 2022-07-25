@@ -15,7 +15,11 @@ def checkPathParamList = [ params.input,
                            params.multiqc_config,
                         //    params.fasta,
                            params.fasta_index,
-                           params.bwamem2_index ]
+                           params.bwamem2_index,
+                           params.barcode_details,
+                           params.promoter_bed,
+                           params.background_ccf,
+                           params.chr_map ]
 
 for (param in checkPathParamList) {
     if (param) {
@@ -90,6 +94,10 @@ workflow CALLINGCARDS {
     ch_samtools_flatstat = Channel.empty()
     ch_samtools_idxstats = Channel.empty()
 
+    ch_promoter_bed      = Channel.of(params.promoter_bed)
+    ch_background_ccf    = Channel.of(params.background_ccf)
+    ch_chr_map           = Channel.of(params.chr_map)
+
     //
     // SUBWORKFLOW_1: Read in samplesheet, validate and stage input files
     //
@@ -150,7 +158,13 @@ workflow CALLINGCARDS {
     //              may be used to quantify hops per TF per promoter region
     PROCESS_HOPS (
         PROCESS_ALIGNMENTS.out.bed,
-        INPUT_CHECK.out.barcode_details
+        INPUT_CHECK.out.barcode_details,
+        ch_promoter_bed,
+        ch_background_ccf,
+        ch_chr_map,
+        params.standard_chr_format,
+        params.sqlite_db_out,
+        params.poisson_pseudocount
     )
 
     //

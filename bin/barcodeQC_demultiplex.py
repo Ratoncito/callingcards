@@ -186,6 +186,7 @@ def barcode_qc(bed_df,
                 if type(barcode_grouping_fields) is str \
                 else "_".join(barcode_grouping_fields)
             aggregate_hops(
+                bed_df[barcode_fltr_vector],
                 COORDINATE_GROUPING_FIELDS+['TF'],
                 CCF_COL_ORDER)\
                 .to_csv(fltr_bed_output_name+"_"+group_name + "_bc_fltr.ccf",

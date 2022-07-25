@@ -13,14 +13,19 @@
             "required": [
                 "input",
                 "organism",
+                "background_ccf",
+                "chr_map",
+                "standard_chr_format",
                 "aligner",
                 "min_mapq",
                 "barcode_length",
                 "insertion_length",
                 "r1_bc_pattern",
                 "promoter_bed",
-                "background_data",
-                "pileup_stranded"
+                "pileup_stranded",
+                "sqlite_db_out",
+                "poisson_pseudocount",
+                "require_exact_length"
             ],
             "properties": {
                 "input": {
@@ -36,6 +41,24 @@
                 "organism": {
                     "type": "string",
                     "default": "None"
+                },
+                "require_exact_length": {
+                    "type": "string",
+                    "description": "Whether or not to remove soft clipped alignments from the count of passing transpositions. Default is False. For yeast, should be True",
+                    "default": "false"
+                },
+                "background_ccf": {
+                    "type": "string",
+                    "default": "None"
+                },
+                "chr_map": {
+                    "type": "string",
+                    "default": "None"
+                },
+                "standard_chr_format": {
+                    "type": "string",
+                    "default": "refseq",
+                    "description": "one of refseq, ucsc, ignomes or ensembl. Using the chr_map file, this will standardize all chromosomes names across the various tables"
                 },
                 "aligner": {
                     "type": "string",
@@ -76,14 +99,19 @@
                     "description": "path to the bed file which defines promoter regions",
                     "fa_icon": "fas fa-file"
                 },
-                "background_data": {
-                    "type": "string",
-                    "description": "background hop data against which to calculate significance",
-                    "fa_icon": "fas fa-file-csv"
-                },
                 "pileup_stranded": {
                     "type": "string",
                     "description": "Boolean -- whether to consider strand of reads in pileup. Default is FALSE"
+                },
+                "sqlite_db_out": {
+                    "type": "string",
+                    "default": ":memory:",
+                    "description": "either a filename with suffix .sqlite, or ':memory:'. If a filename is provided, the file will be saved in the output directory"
+                },
+                "poisson_pseudocount": {
+                    "type": "number",
+                    "default": 0.2,
+                    "description": "pseudocount to add to poisson p-value calculation"
                 },
                 "outdir": {
                     "type": "string",
