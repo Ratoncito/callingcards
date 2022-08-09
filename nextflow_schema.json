@@ -13,6 +13,7 @@
             "required": [
                 "input",
                 "organism",
+                "require_exact_length",
                 "background_ccf",
                 "chr_map",
                 "standard_chr_format",
@@ -24,8 +25,7 @@
                 "promoter_bed",
                 "pileup_stranded",
                 "sqlite_db_out",
-                "poisson_pseudocount",
-                "require_exact_length"
+                "poisson_pseudocount"
             ],
             "properties": {
                 "input": {
@@ -42,10 +42,30 @@
                     "type": "string",
                     "default": "None"
                 },
+                "save_reference": {
+                    "type": "boolean",
+                    "description": "save reference genome indicies, etc?"
+                },
+                "save_intermediate": {
+                    "type": "boolean",
+                    "description": "save intermediate files, such as bams?"
+                },
                 "require_exact_length": {
                     "type": "string",
                     "description": "Whether or not to remove soft clipped alignments from the count of passing transpositions. Default is False. For yeast, should be True",
                     "default": "false"
+                },
+                "reduce_to_se": {
+                    "type": "boolean",
+                    "description": "should paired end reads be reduced to single end reads after extracting the barcodes?"
+                },
+                "r1_crop": {
+                    "type": "boolean",
+                    "description": "after reducing PE reads to single end, should reads be cropped?"
+                },
+                "r1_crop_length": {
+                    "type": "integer",
+                    "default": 88
                 },
                 "background_ccf": {
                     "type": "string",

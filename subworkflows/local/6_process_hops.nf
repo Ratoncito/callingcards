@@ -33,9 +33,16 @@ workflow PROCESS_HOPS {
     BARCODE_QC_DEMULTIPLEX ( bed, barcode_details )
     ch_versions = ch_versions.mix(BARCODE_QC_DEMULTIPLEX.out.versions)
 
+    BARCODE_QC_DEMULTIPLEX.out.ccf
+        .map{meta,ccf_list ->
+            ccf_list}
+        .flatten()
+        .map{ it -> [["id": it.baseName-"_bc_fltr"],it]}
+        .set{ find_sig_promoters_input }
+
     if(params.organism == 'yeast'){
         YEAST_FIND_SIG_PROMOTERS (
-            BARCODE_QC_DEMULTIPLEX.out.ccf,
+            find_sig_promoters_input,
             promoter_bed,
             background_ccf,
             chr_map,

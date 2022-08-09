@@ -39,6 +39,9 @@
             "samtools/stats": {
                 "git_sha": "e751e5040af57e1b4e06ed4e0f3efe6de25c1683"
             },
+            "trimmomatic": {
+                "git_sha": "c1eb9cce44e0b5cdab6672ebfa2f8e8842d2aa86"
+            },
             "umitools/extract": {
                 "git_sha": "9d0cad583b9a71a6509b754fdf589cbfbed08961"
             }

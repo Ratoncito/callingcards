@@ -9,7 +9,7 @@ include { BWAMEM2_ALIGNER } from '../nf-core/bwamem2'
 workflow ALIGN {
     take:
     reads            // channel: [ val(meta), [ reads ] ]
-    genome           // channel: file(ref_genome)
+    fasta           // channel: file(fasta)
 
     main:
 
@@ -19,7 +19,7 @@ workflow ALIGN {
     if(params.aligner == 'bwamem2') {
         BWAMEM2_ALIGNER (
             reads,
-            genome
+            fasta
         )
         ch_bam      = ch_bam.mix(BWAMEM2_ALIGNER.out.bam)
         ch_versions = ch_versions.mix(BWAMEM2_ALIGNER.out.versions)

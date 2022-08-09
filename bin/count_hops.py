@@ -68,10 +68,6 @@ def parse_args(args=None):
     parser = argparse.ArgumentParser(description=Description, epilog=Epilog)
     parser.add_argument("bampath",
                          help="path to the input bam file")
-    parser.add_argument("single_end",
-                         help="Boolean. True if the bam file is created from \
-                            single end reads. May be either a string true/false \
-                                (case doesn't matter) or 1/0")
     parser.add_argument("require_exact_length",
                         help="True to filter out any soft-clipped reads, False "+\
                         "otherwise. Default is False",
@@ -82,8 +78,7 @@ def parse_args(args=None):
     return parser.parse_args(args)
 
 
-def add_read_group_and_tags(bampath, single_end,
-                            require_exact_length, mapq_filter):
+def add_read_group_and_tags(bampath, require_exact_length, mapq_filter, dry_run=False):
     """Iterate through the bam file and extract to bed custom format reads which
     meet quality/alignment thresholds
 
@@ -92,6 +87,9 @@ def add_read_group_and_tags(bampath, single_end,
                        (True) or not (False)
     :param mapq_filter: exclude reads less than or equal to this value
     :param require_exact_length: True to filter out any reads with soft clipping
+    :param dry_run: default False. Set to True for testing. Purpose is to be
+        able to set a breakpoint before the write statement. Setting to True
+        prevents writing to file.
 
     :return: none. Write the custom bed file to file as tsv. output name is
              the input name with .bam replaced by .bed
@@ -113,7 +111,7 @@ def add_read_group_and_tags(bampath, single_end,
     for read in input_bamfile.fetch():
 
         # only consider read 1
-        if read.is_read1:
+        if read.is_read1 or not read.is_paired:
 
             count_read = False
 
@@ -121,7 +119,7 @@ def add_read_group_and_tags(bampath, single_end,
             # In either case -- paired or not -- throw out the read if the
             # mapping quality is too low
 
-            if single_end:
+            if not read.is_paired:
                 # do not count read if unmapped, secondary, failing qc
                 # or is supplementary alignment
                 count_read = True if \
@@ -197,35 +195,35 @@ def add_read_group_and_tags(bampath, single_end,
     passing_reads_df = pd.DataFrame(data=passing_reads)
     failing_reads_df = pd.DataFrame(data=failing_reads)
     # write out
-    passing_reads_df.to_csv(out_dict.get('passing'),
-                            sep = "\t",
-                            index = False,
-                            header = None)
+    if not dry_run:
+        passing_reads_df.to_csv(out_dict.get('passing'),
+                                sep = "\t",
+                                index = False,
+                                header = None)
 
-    failing_reads_df.to_csv(out_dict.get('failing'),
-                            sep = "\t",
-                            index = False,
-                            header = None)
+        failing_reads_df.to_csv(out_dict.get('failing'),
+                                sep = "\t",
+                                index = False,
+                                header = None)
 
 def main(args=None):
     args = parse_args(args)
 
-    def parse_bool(single_end):
-        single_end_uncase = single_end.lower()
+    def parse_bool(val):
+        # translate from possible input to boolean
         switcher = {
             "0": False,
             "1": True,
             "true": True,
             "false": False
         }
-
-        if switcher.get(single_end_uncase, 1) == 1:
+        # throw error if cannot cast val to boolean based on switch statement
+        if not isinstance(switcher.get(val.lower()),bool):
             raise ValueError("Invalid choice for argument single_end: %s. \
                 Must be one of 0,1, true/True/TRUE, false/False/FALSE" %single_end)
-        else:
-            return switcher.get(single_end_uncase)
 
-    single_end = parse_bool(args.single_end)
+        return switcher.get(val.lower())
+
     require_exact_length = parse_bool(args.require_exact_length)
 
     # Check inputs
@@ -237,7 +235,6 @@ def main(args=None):
     # loop over the reads in the bam file and add the read group (header and tag)
     # and the XI and XZ tags
     add_read_group_and_tags(args.bampath,
-                            single_end,
                             require_exact_length,
                             int(args.mapq_filter))
 

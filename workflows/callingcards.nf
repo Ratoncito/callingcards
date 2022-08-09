@@ -16,7 +16,6 @@ def checkPathParamList = [ params.input,
                         //    params.fasta,
                            params.fasta_index,
                            params.bwamem2_index,
-                           params.barcode_details,
                            params.promoter_bed,
                            params.background_ccf,
                            params.chr_map ]
@@ -56,8 +55,9 @@ ch_multiqc_custom_config = params.multiqc_config ?
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
 //
 include { INPUT_CHECK          } from '../subworkflows/local/1_input_check'
+include { SAMTOOLS_FAIDX       } from "${projectDir}/modules/nf-core/modules/samtools/faidx/main"
 include { SAMTOOLS_INDEX_FASTA } from '../subworkflows/nf-core/2_samtools_index_fasta'
-include { UMITOOLS_FASTQC      } from '../subworkflows/nf-core/3_umitools_fastqc'
+include { PREPARE_READS        } from '../subworkflows/nf-core/3_prepare_reads'
 include { ALIGN                } from '../subworkflows/local/4_align'
 include { PROCESS_ALIGNMENTS   } from '../subworkflows/local/5_process_alignments'
 include { PROCESS_HOPS         } from '../subworkflows/local/6_process_hops'
@@ -74,6 +74,10 @@ include { PROCESS_HOPS         } from '../subworkflows/local/6_process_hops'
 include { FASTQC                      } from '../modules/nf-core/modules/fastqc/main'
 include { MULTIQC                     } from '../modules/nf-core/modules/multiqc/main'
 include { CUSTOM_DUMPSOFTWAREVERSIONS } from '../modules/nf-core/modules/custom/dumpsoftwareversions/main'
+
+fasta     = params.fasta     ?
+            Channel.fromPath(params.fasta).collect()     :
+            Channel.empty()
 
 /*
 ================================================================================
@@ -113,9 +117,9 @@ workflow CALLINGCARDS {
     //
     // if the user does not provide an genome index, index it
     if (!params.fasta_index){
-        SAMTOOLS_INDEX_FASTA ( params.fasta )
-        ch_versions = ch_versions.mix(SAMTOOLS_INDEX_FASTA.out.versions.first())
-        ch_fasta_index = SAMTOOLS_INDEX_FASTA.out.fai
+        SAMTOOLS_FAIDX ( fasta.map{it -> ["", it]} )
+        ch_versions = ch_versions.mix(SAMTOOLS_FAIDX.out.versions)
+        ch_fasta_index = SAMTOOLS_FAIDX.out.fai
     } else {
         ch_fasta_index = Channel.of(["",params.fasta_index])
     }
@@ -123,10 +127,10 @@ workflow CALLINGCARDS {
     //
     // SUBWORKFLOW_3: run sequencer level QC, extract barcodes and trim
     //
-    UMITOOLS_FASTQC (
+    PREPARE_READS (
         INPUT_CHECK.out.reads
     )
-    ch_versions = ch_versions.mix(UMITOOLS_FASTQC.out.versions.first())
+    ch_versions = ch_versions.mix(PREPARE_READS.out.versions.first())
 
     //
     // SUBWORKFLOW_4: align reads
@@ -134,8 +138,8 @@ workflow CALLINGCARDS {
     // output:
     //
     ALIGN (
-        UMITOOLS_FASTQC.out.reads,
-        params.fasta
+        PREPARE_READS.out.reads,
+        fasta
     )
     ch_versions = ch_versions.mix(ALIGN.out.versions.first())
 
@@ -145,7 +149,7 @@ workflow CALLINGCARDS {
     //
     PROCESS_ALIGNMENTS (
         ALIGN.out.bam,
-        params.fasta,
+        fasta,
         ch_fasta_index
     )
     ch_samtools_stats    = PROCESS_ALIGNMENTS.out.stats
@@ -166,13 +170,7 @@ workflow CALLINGCARDS {
         params.sqlite_db_out,
         params.poisson_pseudocount
     )
-
-    //
-    // SUBWORKFLOW_7: calculate statistics and other metrics relating to the hops
-    //
-    // PROCESS_QUANTIFICATION (
-
-    // )
+    ch_versions = ch_versions.mix(PROCESS_HOPS.out.versions.first())
 
     //
     // collect software versions into file
@@ -192,11 +190,12 @@ workflow CALLINGCARDS {
     ch_multiqc_files = ch_multiqc_files.mix(ch_multiqc_custom_config.collect().ifEmpty([]))
     ch_multiqc_files = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
     ch_multiqc_files = ch_multiqc_files.mix(CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml.collect())
-    ch_multiqc_files = ch_multiqc_files.mix(UMITOOLS_FASTQC.out.fastqc_zip.collect{it[1]}.ifEmpty([]))
+    ch_multiqc_files = ch_multiqc_files.mix(PREPARE_READS.out.fastqc_zip.collect{it[1]}.ifEmpty([]))
+    ch_multiqc_files = ch_multiqc_files.mix(PREPARE_READS.out.umi_log.collect{it[1]}.ifEmpty([]))
+    ch_multiqc_files = ch_multiqc_files.mix(PREPARE_READS.out.trimmomatic_log.collect{it[1]}.ifEmpty([]))
     ch_multiqc_files = ch_multiqc_files.mix(ch_samtools_stats.collect{it[1]}.ifEmpty([]))
     ch_multiqc_files = ch_multiqc_files.mix(ch_samtools_flagstat.collect{it[1]}.ifEmpty([]))
     ch_multiqc_files = ch_multiqc_files.mix(ch_samtools_idxstats.collect{it[1]}.ifEmpty([]))
-    // add BAMQC output here, also -- see RNAseq pipeline
 
 
     MULTIQC (

@@ -18,9 +18,8 @@ process COUNT_HOPS {
     path  "versions.yml"                                       , emit: versions
 
     script: // see nf-core-callingcards/bin/count_hops.py
-    def single_end = meta.single_end ? 1 : 0
     """
-        count_hops.py ${bed} ${single_end} ${params.require_exact_length} ${min_mapq}
+        count_hops.py ${bed} ${params.require_exact_length} ${min_mapq}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

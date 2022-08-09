@@ -164,19 +164,26 @@ def barcode_qc(bed_df,
     # reduce the cc bed file to only those rows which have expected
     # barcodes, and write out
     col_list = list(bed_df.columns)
+
+    # filter the bed_df for those reads which did not pass the barcode_fltr
+    fltr_bed_df = bed_df[barcode_fltr_vector]
     try:
         # try to read the field tf_map into a dataframe. if there is a keyerror,
         # handle in the except block
         barcode_map = pd.DataFrame(barcode_details['tf_map'])
+
         # group by TF. If there is more than one field to group on, add to the
         # list
         barcode_grouping_fields = ["TF"]
+
         # row filter, join, transform mismatches to 'other'
         barcode_to_tf_df = pd.merge(barcode_component_df,barcode_map,
                         how = 'left',
                         on = list(barcode_map.columns[barcode_map.columns != "TF"]))
+
         col_list.append("TF")
-        grouped_bed = pd.concat([bed_df, barcode_to_tf_df], axis=1)[col_list]\
+
+        grouped_bed = pd.concat([fltr_bed_df, barcode_to_tf_df], axis=1)[col_list]\
                         .fillna({'TF':"other"})\
                         .groupby(barcode_grouping_fields)
 
@@ -186,7 +193,7 @@ def barcode_qc(bed_df,
                 if type(barcode_grouping_fields) is str \
                 else "_".join(barcode_grouping_fields)
             aggregate_hops(
-                bed_df[barcode_fltr_vector],
+                fltr_df,
                 COORDINATE_GROUPING_FIELDS+['TF'],
                 CCF_COL_ORDER)\
                 .to_csv(fltr_bed_output_name+"_"+group_name + "_bc_fltr.ccf",
@@ -197,7 +204,7 @@ def barcode_qc(bed_df,
     # table
     except KeyError:
         aggregate_hops(
-            bed_df[barcode_fltr_vector],
+            fltr_bed_df,
             COORDINATE_GROUPING_FIELDS,
             CCF_COL_ORDER)\
             .to_csv(fltr_bed_output_name+"_bc_fltr.ccf",
