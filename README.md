@@ -14,122 +14,95 @@
 [![Follow on Twitter](http://img.shields.io/badge/twitter-%40nf__core-1DA1F2?labelColor=000000&logo=twitter)](https://twitter.com/nf_core)
 [![Watch on YouTube](http://img.shields.io/badge/youtube-nf--core-FF0000?labelColor=000000&logo=youtube)](https://www.youtube.com/c/nf-core)
 
-## NOTE
-Need to look at yeast count_hops -- in the original make_ccf.py file, the check
-on the reverse and forward strand may not be equivalent -- the reverse checks
-that the read is exactly the right length. the forward just checks that it starts
-at read position 0
-
 ## DEVELOPMENT INSTALLATION
 
-There has been a somewhat major update -- ccf files are created now
-(sort of ccf -- some small differences in order to comply
-with [bed format standards here](https://github.com/samtools/hts-specs/blob/master/BEDv1.pdf) ),
-and I am not aggregating inserts until the following step, as yet unwritten, where inserts
-will be aggregated over promoter regions. Some QC files are also produced. Output is
-in the directories:
-  - `count`: only the 'raw' bed file, no filtering or QC
-  - `barcode`: filtered bed files (so only those rows which match barcode and insertion site expectation) along and a bunch of QC files.
-
-The names of these directories are place holders (just what is produced by default)
--- not what I would suggest they be named.
+### Pipeline Dependencies
 
 You will need the following two pieces of software to run this pipeline:
 
 1. [Nextflow](https://www.nextflow.io/)
-2. One of: [Singularity](https://sylabs.io/singularity/), [Docker](https://www.docker.com/) or [conda](https://docs.conda.io/en/latest/) (singularity or docker are far preferred)
+2. One of: [Singularity](https://sylabs.io/singularity/),
+[Docker](https://www.docker.com/) or
+[conda](https://docs.conda.io/en/latest/) (singularity or docker are far preferred)
 
-You no longer need `git lfs`. BUT, the test profiles pull from iGenomes now. As
-a result, the indexing step for the human genome, if you do not provide a bwamem2
-index as an additional parameter, takes up to ~60GB. Remember you only need to
-do this once, and while this can run on a local computer reasonably quickly
-even for full size fastq files, it isn't reasonable to expect that the index
-can be created on a local computer. In any case, if you don't want to deal with
-creating an index for the human genome, try the yeast test profile instead with
-`test_yeast`. The genome is smaller and I believe takes less than 14GB to index.
+### SETUP
 
-__NOTE__: The issue of where/how this is stored is best handled via a stable
-config file that everyone in the lab uses -- more on this in the next meeting.
+I suggest creating a directory from which you will launch the pipeline. The
+name of this directory doesn't matter.
 
-
-To run the tests, the steps are the same:
-```
+```bash
+# make a new directory in your current working directory
 $ mkdir cc_tester
-# you could download/install the nextflow executable in this directory
+# change locations into the new directory
 $ cd cc_tester
+```
+Next, clone this repository
+
+```bash
 $ git clone https://github.com/cmatKhan/callingcards.git
 ```
 
-Next, copy and paste the script below into a file called, for example, `run_nf.sh`
+Below are examples scripts used to launch the pipeline on a local computer,
+or on HTCF (using slurm). Copy and paste the script into a file called,
+for instance, `run_nf.sh`. Note that the name of this file does not matter.
+
+### Running the pipeline in different environments
+
+__LOCAL__ (your laptop)
 
 ```
 #!/bin/bash
 
-mkdir tmp
 
-# CHOOSE ONE OF SINGULARITY, DOCKER OR CONDA. I haven't tested docker. It probably works
+tmp=$(mktemp -d /tmp/$USER-singularity-XXXXXX)
+
+mkdir singularity
+
+export NXF_SINGULARITY_CACHEDIR=singularity
+export SINGULARITY_TMPDIR=$tmp
+export SINGULARITY_CACHEDIR=$tmp
+
+
+# CHOOSE ONE OF SINGULARITY, DOCKER OR CONDA. Conda itself is buggy -- use only as a very last resort.
 # CHOOSE EITHER test_human or test_yeast
 nextflow run callingcards/main.nf  -profile <test_human, test_yeast>,<singularity/docker/conda> -resume
 
 ```
+Make the script executable (on a linux system, `chmod +x run_nf.sh`) and then launch:
+
 Note that this assumes that nextflow is either in your `$PATH`, or the executable is
 in the same directory from which you are launching this script.
 
-Make the script executable (on a linux system, `chmod +x run_nf.sh`) and then launch:
+To launch the script, do the following:
 
 ```
-./run_nf.sh
+$ ./run_nf.sh
 ```
-__Warning__: I haven't looked at the test_slurm and test_sge profiles since
-I made this major update (different genome paths, adding the ccf modules, etc).
-They may work, but they may not.
-
-You could just execute the line in the runscript, but if there are errors, I'll ask to see the
-submission command -- saving the run command is useful for debugging.
-
-This will run the pipeline locally, meaning the compute resources come from
-the machine from which you launch. Be careful -- don't do this from a login node
-on the cluster, for example. This will work on your local computer, or an interactive
-node, with at least 16GB ram.
-
-If you want to test this via scheduler submission, then here are examples of
-SLURM and and SGE submission scripts:
 
 __SLURM__ (htcf)
 ```
 #!/usr/bin/env bash
 
+#SBATCH --mem-per-cpu=10G
+#SBATCH -J cc_nf_test.out
+#SBATCH -o cc_nf_test.out
+
+# load system dependencies -- on HTCF, we use spack
 eval $(spack load --sh openjdk)
 eval $(spack load --sh singularityce@3.8.0)
 eval $(spack load --sh nextflow)
 
-mkdir tmp
+tmp=$(mktemp -d /tmp/$USER-singularity-XXXXXX)
 
-nextflow run callingcards/main.nf  -profile test_slurm,singularity -resume
+mkdir singularity
+
+export NXF_SINGULARITY_CACHEDIR=singularity
+export SINGULARITY_TMPDIR=$tmp
+export SINGULARITY_CACHEDIR=$tmp
+
+nextflow run callingcards/main.nf -profile test_slurm,singularity -resume
 ```
 
-
-__SGE__ (dsg -- the genetics cluster. Note that I'm using conda, not singularity, since singularity isn't available on their cluster)
-```
-#!/bin/bash
-
-#$ -N nf_tester
-#$ -cwd
-#$ -o /dsgmnt/llfs_external/$USER/logs
-#$ -e /dsgmnt/llfs_external/$USER/logs
-
-root=/dsgmnt/llfs_external/cmateusiak
-
-# activate environment
-# note that in this case, I installed nextflow using conda like so:
-# conda create -p /path/to/envs/dir/nextflow nextflow
-source activate $root/conda_envs/nextflow
-
-mkdir tmp
-
-nextflow run callingcards/main.nf  -profile test_sge,conda -resume
-
-```
 
 # IGNORE EVERYTHING BELOW
 ## Introduction
