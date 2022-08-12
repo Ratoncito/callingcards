@@ -1,12 +1,26 @@
 # nf-core/callingcards: Usage
 
-## :warning: Please read this documentation on the nf-core website: [https://nf-co.re/callingcards/usage](https://nf-co.re/callingcards/usage)
+<!-- ## :warning: Please read this documentation on the nf-core website: [https://nf-co.re/callingcards/usage](https://nf-co.re/callingcards/usage) -->
 
-> _Documentation of pipeline parameters is generated automatically from the pipeline schema and can no longer be found in markdown files._
+<!-- > _Documentation of pipeline parameters is generated automatically from the pipeline schema and can no longer be found in markdown files._ -->
 
 ## Introduction
 
-<!-- TODO nf-core: Add documentation about anything specific to running your pipeline. For general topics, please point to (and add to) the main nf-core website. -->
+Calling Cards experiments may be performed in both yeast and mammalian cells. The processing steps diverge, and this
+divergence is controlled by setting certain parameters. Suggested default parameters for yeast and mammalian
+processing runs are provided through the profiles [yeast](../conf/default_yeast.config) and [mammal](../conf/default_mammal.config). These may be used by simply including them with the `-profile` flag, for instance:
+
+```
+$ nextflow run callingcards/main.nf \
+    -profile default_yeast,singularity \
+    -c local.config \
+    --input /path/to/samplesheet.csv
+    --fasta /path/to/genome.fasta
+    --output results_20220811
+```
+
+`local.config` is a [configuration](https://nf-co.re/usage/configuration) file which is the best place to put configuration settings such as what [executor](https://www.nextflow.io/docs/latest/executor.html)
+you wish to use. If your institution already has a configuration profile on nf-core, then you should use that profile in the `-profile` flag instead.nf-
 
 ## Samplesheet input
 
@@ -15,52 +29,114 @@ You will need to create a samplesheet with information about the samples you wou
 ```console
 --input '[path to samplesheet file]'
 ```
+Or, if you are using a file to save the run parameters (recommended), rather than submitting them on the command line,
+then the file, with only the input set, would look like so:
 
-### Multiple runs of the same sample
+```json
 
-The `sample` identifiers have to be the same when you have re-sequenced the same sample more than once e.g. to increase sequencing depth. The pipeline will concatenate the raw reads before performing any downstream analysis. Below is an example for the same sample sequenced across 3 lanes:
+{
+  "input":"input_samplesheet.csv"
+}
 
-```console
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
-CONTROL_REP1,AEG588A1_S1_L003_R1_001.fastq.gz,AEG588A1_S1_L003_R2_001.fastq.gz
-CONTROL_REP1,AEG588A1_S1_L004_R1_001.fastq.gz,AEG588A1_S1_L004_R2_001.fastq.gz
 ```
 
 ### Full samplesheet
 
-The pipeline will auto-detect whether a sample is single- or paired-end using the information provided in the samplesheet. The samplesheet can have as many columns as you desire, however, there is a strict requirement for the first 3 columns to match those defined in the table below.
+The pipeline will auto-detect whether a sample is single- or paired-end using the information provided in the samplesheet. The samplesheet can have as many columns as you desire, however, there is a strict requirement for the first 4 columns to match those defined in the table below.
 
 A final samplesheet file consisting of both single- and paired-end data may look something like the one below. This is for 6 samples, where `TREATMENT_REP3` has been sequenced twice.
 
 ```console
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
-CONTROL_REP2,AEG588A2_S2_L002_R1_001.fastq.gz,AEG588A2_S2_L002_R2_001.fastq.gz
-CONTROL_REP3,AEG588A3_S3_L002_R1_001.fastq.gz,AEG588A3_S3_L002_R2_001.fastq.gz
-TREATMENT_REP1,AEG588A4_S4_L003_R1_001.fastq.gz,
-TREATMENT_REP2,AEG588A5_S5_L003_R1_001.fastq.gz,
-TREATMENT_REP3,AEG588A6_S6_L003_R1_001.fastq.gz,
-TREATMENT_REP3,AEG588A6_S6_L004_R1_001.fastq.gz,
+sample,fastq_1,fastq_2,barcode_details
+mouse_AY60-6_50,mouse/test_data/AY60-6_50k_downsampled_mouse.fastq.gz,,mouse/barcode_details.json
+mouse_AY60-6_100,mouse/test_data/AY60-6_100k_downsampled_mouse.fastq.gz,,mouse/barcode_details.json
+mouse_AY09-1_50_lowQuality,mouse/test_data/AY09-1_50k_downsampled_mouse_lowQuality.fastq.gz,,mouse/barcode_details.json
+mouse_AY09-1_100_lowQuality,mouse/test_data/AY09-1_100k_downsampled_mouse_lowQuality.fastq.gz,,mouse/barcode_details.json
+
 ```
 
 | Column         | Description                                                                                                                                                                            |
 |----------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `sample`       | Custom sample name. This entry will be identical for multiple sequencing libraries/runs from the same sample. Spaces in sample names are automatically converted to underscores (`_`). |
-| `fastq_1`      | Full path to FastQ file for Illumina short reads 1. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
-| `fastq_2`      | Full path to FastQ file for Illumina short reads 2. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
+| `sample`          | Custom sample name. This entry will be identical for multiple sequencing libraries/runs from the same sample. Spaces in sample names are automatically converted to underscores (`_`). |
+| `fastq_1`         | Full path to FastQ file for Illumina short reads 1. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
+| `fastq_2`         | Full path to FastQ file for Illumina short reads 2. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".
+| `barcode_details` | Full path to the barcode details json file for a given sample. |
 
 An [example samplesheet](../assets/samplesheet.csv) has been provided with the pipeline.
+
+### Barcode Details
+
+The barcode details json stores data which allows the pipeline to relate sequence barcodes in the calling cards reads to a given transcription factor.
+
+#### [Yeast](../assets/yeast/barcode_details.json)
+
+
+```json
+
+{
+    "indicies": {
+        "r1_primer_bc":     [0, 5],
+        "transposon_seq":   [5, 22],
+        "r2_primer_bc":     [22, 30],
+        "restriction_site": [30, 34]
+    },
+    "components": {
+        "r1_primer_bc":     ["TCAGT", "GCCTG", "ATTTG", "TTGGT", "CTCGG"],
+        "transposon_seq":   ["AATTCACTACGTCAACA"],
+        "r2_primer_bc":     ["CCCGTTGG", "GGCGGCAG", "GGGGGGGT", "GGGGGTAG", "TCGTCAGT"],
+        "restriction_site": ["TCGA","GCGC","CCGG"]
+    },
+    "tf_map": {
+        "r1_primer_bc":    ["TCAGT", "GCCTG", "ATTTG", "TTGGT", "CTCGG"],
+        "r2_primer_bc":    ["CCCGTTGG", "GGCGGCAG", "GGGGGGGT", "GGGGGTAG", "TCGTCAGT"],
+        "TF":              ["MIG2", "CAT8", "GLN3", "ARO80", "CBF1"]
+    }
+
+}
+
+```
+
+#### [Mammals](../assets/human/barcode_details.json)
+
+```json
+
+{
+    "indicies": {
+        "om_pb": [0, 3],
+        "pb_lrt1": [3, 28],
+        "srt": [28, 32],
+        "pb_lrt2": [32, 38]
+    },
+    "components": {
+        "om_pb":   ["TAG"],
+        "pb_lrt1": ["CGTCAATTTTACGCAGACTATCTTT"],
+        "srt":     ["CTAG", "CAAC", "CTGA", "GCAT", "GTAC", "CACA", "TGAC", "GTCA",
+                    "CGAT", "CTCT", "GAAG", "TCGA", "CATG", "GTTG", "CTTC", "GCTA",
+                    "GAGA", "GTGT", "CGTA", "TGGT", "GGAA", "ACAC", "TCAG", "TTGG",
+                    "CAGT", "TTTT"],
+        "pb_lrt2": ["GGTTAA"]
+    },
+    "insert_seq": ["TTAA"]
+
+}
+
+```
 
 ## Running the pipeline
 
 The typical command for running the pipeline is as follows:
 
-```console
-nextflow run nf-core/callingcards --input samplesheet.csv --genome GRCh37 -profile docker
+```
+$ nextflow run callingcards/main.nf \
+    -profile default_mammals,singularity \
+    -c local.config \
+    -params-file params.json
 ```
 
-This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.
+This will launch the pipeline with the `default_mammal` pipeline settings. It will use the `singularity` profile, and
+set user specific system configuration (eg executor settings) in a file called local.config. Parameters such as `input`,
+the path to the samplesheet, `output`, and other run parameters will be set in the params.json file.
+See below for more information about profiles.
 
 Note that the pipeline will create the following files in your working directory:
 
@@ -75,6 +151,13 @@ results         # Finished results (configurable, see below)
 
 When you run the above command, Nextflow automatically pulls the pipeline code from GitHub and stores it as a cached version. When running the pipeline after this, it will always use the cached version if available - even if the pipeline has been updated since. To make sure that you're running the latest version of the pipeline, make sure that you regularly update the cached version of the pipeline:
 
+```bash
+$ cd /repo/path/callingcards
+
+$ git pull
+```
+
+#### note this won't work unless this goes onto nf-core
 ```console
 nextflow pull nf-core/callingcards
 ```
