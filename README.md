@@ -35,7 +35,7 @@ On release, automated continuous integration tests run the pipeline on a full-si
 1. Alignment
     1. [`bwamem2`](https://github.com/bwa-mem2/bwa-mem2)
 1. Process Alignments
-    1. Extract alignment QC metrics ([`Samtools`](https://www.htslib.org/))
+    1. Extract alignment QC metrics ([`Samtools`](https://www.htslib.org/), [`preseq`](http://smithlabresearch.org/software/preseq/))
     1. Add Read Group and tags to alignment files ([custom script](https://github.com/cmatKhan/callingcards/blob/main/bin/barcodeQC_demultiplex.py))
     1. Quantify transposon hops ([custom script](https://github.com/cmatKhan/callingcards/blob/main/bin/barcodeQC_demultiplex.py))
 1. Process Transposon Quantification

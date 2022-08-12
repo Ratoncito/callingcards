@@ -14,7 +14,11 @@ represent a disjoint set of the reads from the alignment. Files with the suffix
 from the `barcode_details.json` file for a given sample. Similarly, files with
 the suffix `_tally.tsv`.
 
-The output intended for analysis is `_bc_fltr.qbed`
+The output intended for analysis is `_bc_fltr.qbed`. For only yeast, currently, there will also be a stats file `_bc_fltr_stats.csv`.
+
+## samtools
+
+stores the output of the samtools alignment stats output.
 
 ## Pipeline overview
 

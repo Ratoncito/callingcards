@@ -30,7 +30,7 @@ workflow PREPARE_READS {
     // run umi extract to add barcodes to fastq id lines
     UMITOOLS_EXTRACT ( reads )
     umi_log     = UMITOOLS_EXTRACT.out.log
-    ch_versions = ch_versions.mix(UMITOOLS_EXTRACT.out.versions.first())
+    ch_versions = ch_versions.mix(UMITOOLS_EXTRACT.out.versions)
 
     // run fastqc after trimming off the barcodes, etc
 
@@ -57,7 +57,7 @@ workflow PREPARE_READS {
             )
             ch_reads = ch_reads.mix(TRIMMOMATIC.out.trimmed_reads)
             trimmomatic_log = trimmomatic_log.mix(TRIMMOMATIC.out.log)
-            ch_versions = ch_versions.mix(TRIMMOMATIC.out.versions.first())
+            ch_versions = ch_versions.mix(TRIMMOMATIC.out.versions)
         // else, return the uncropped SE read data to ch_reads
         }else {
             ch_reads = ch_reads.mix(trimmomatic_input)

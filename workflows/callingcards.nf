@@ -54,13 +54,13 @@ ch_multiqc_custom_config = params.multiqc_config ?
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
 //
-include { INPUT_CHECK          } from '../subworkflows/local/1_input_check'
-include { SAMTOOLS_FAIDX       } from "${projectDir}/modules/nf-core/modules/samtools/faidx/main"
-include { SAMTOOLS_INDEX_FASTA } from '../subworkflows/nf-core/2_samtools_index_fasta'
-include { PREPARE_READS        } from '../subworkflows/nf-core/3_prepare_reads'
-include { ALIGN                } from '../subworkflows/local/4_align'
-include { PROCESS_ALIGNMENTS   } from '../subworkflows/local/5_process_alignments'
-include { PROCESS_HOPS         } from '../subworkflows/local/6_process_hops'
+include { INPUT_CHECK        } from "${projectDir}/subworkflows/local/1_input_check"
+include { PREPARE_GENOME     } from "${projectDir}/subworkflows/local/2_prepare_genome"
+include { PREPARE_READS      } from "${projectDir}/subworkflows/local/3_prepare_reads"
+include { ALIGN              } from "${projectDir}/subworkflows/local/4_align"
+include { PROCESS_ALIGNMENTS } from "${projectDir}/subworkflows/local/5_process_alignments"
+include { PROCESS_HOPS       } from "${projectDir}/subworkflows/local/6_process_hops"
+include { STATISTICS         } from "${projectDir}/subworkflows/local/7_statistics"
 
 /*
 ================================================================================
@@ -74,10 +74,6 @@ include { PROCESS_HOPS         } from '../subworkflows/local/6_process_hops'
 include { FASTQC                      } from '../modules/nf-core/modules/fastqc/main'
 include { MULTIQC                     } from '../modules/nf-core/modules/multiqc/main'
 include { CUSTOM_DUMPSOFTWAREVERSIONS } from '../modules/nf-core/modules/custom/dumpsoftwareversions/main'
-
-fasta     = params.fasta     ?
-            Channel.fromPath(params.fasta).collect()     :
-            Channel.empty()
 
 /*
 ================================================================================
@@ -98,9 +94,13 @@ workflow CALLINGCARDS {
     ch_samtools_flatstat = Channel.empty()
     ch_samtools_idxstats = Channel.empty()
 
-    ch_promoter_bed      = Channel.of(params.promoter_bed)
-    ch_background_qbed    = Channel.of(params.background_qbed)
-    ch_chr_map           = Channel.of(params.chr_map)
+    fasta = params.fasta?
+            Channel.fromPath(params.fasta).collect():
+            Channel.empty()
+
+    ch_promoter_bed      = Channel.of(params.promoter_bed).collect()
+    ch_background_qbed   = Channel.of(params.background_qbed).collect()
+    ch_chr_map           = Channel.of(params.chr_map).collect()
 
     //
     // SUBWORKFLOW_1: Read in samplesheet, validate and stage input files
@@ -111,18 +111,15 @@ workflow CALLINGCARDS {
     ch_versions = ch_versions.mix(INPUT_CHECK.out.versions)
 
     //
-    // SUBWORKFLOW_2: use samtools to create a .fai index for the genome
+    // SUBWORKFLOW_2: Index the genome in various ways
     // input:
     // output:
     //
     // if the user does not provide an genome index, index it
-    if (!params.fasta_index){
-        SAMTOOLS_FAIDX ( fasta.map{it -> ["", it]} )
-        ch_versions = ch_versions.mix(SAMTOOLS_FAIDX.out.versions)
-        ch_fasta_index = SAMTOOLS_FAIDX.out.fai
-    } else {
-        ch_fasta_index = Channel.of(["",params.fasta_index])
-    }
+    PREPARE_GENOME(
+        fasta
+    )
+    ch_versions = ch_versions.mix(PREPARE_GENOME.out.versions)
 
     //
     // SUBWORKFLOW_3: run sequencer level QC, extract barcodes and trim
@@ -130,7 +127,7 @@ workflow CALLINGCARDS {
     PREPARE_READS (
         INPUT_CHECK.out.reads
     )
-    ch_versions = ch_versions.mix(PREPARE_READS.out.versions.first())
+    ch_versions = ch_versions.mix(PREPARE_READS.out.versions)
 
     //
     // SUBWORKFLOW_4: align reads
@@ -139,9 +136,9 @@ workflow CALLINGCARDS {
     //
     ALIGN (
         PREPARE_READS.out.reads,
-        fasta
+        PREPARE_GENOME.out.bwamem2_index
     )
-    ch_versions = ch_versions.mix(ALIGN.out.versions.first())
+    ch_versions = ch_versions.mix(ALIGN.out.versions)
 
     //
     // SUBWORKFLOW_5: sort, add barcodes as read group, add tags, index and
@@ -150,19 +147,33 @@ workflow CALLINGCARDS {
     PROCESS_ALIGNMENTS (
         ALIGN.out.bam,
         fasta,
-        ch_fasta_index
+        PREPARE_GENOME.out.fai
     )
-    ch_samtools_stats    = PROCESS_ALIGNMENTS.out.stats
-    ch_samtools_flagstat = PROCESS_ALIGNMENTS.out.flagstat
-    ch_samtools_idxstats = PROCESS_ALIGNMENTS.out.idxstats
-    ch_versions          = ch_versions.mix(PROCESS_ALIGNMENTS.out.versions.first())
+    ch_versions          = ch_versions.mix(PROCESS_ALIGNMENTS.out.versions)
 
-    //
-    // SUBWORKFLOW_6: turn alignments into qbed (modified bed format) which
+    // join the barcode details file back to the corresponding samples
+    PROCESS_ALIGNMENTS.out.bed
+        .map{ meta, passing, failing -> [meta, [passing, failing]]}
+        .mix(INPUT_CHECK.out.barcode_details)
+        .groupTuple()
+        .multiMap{meta, file_list ->
+            a: [ add_status_to_meta(meta,file_list[1][0]), file_list[0], file_list[1][0] ]
+            b: [ add_status_to_meta(meta,file_list[1][1]), file_list[0], file_list[1][1] ] }
+        .set{ ch_passing_failing_bed }
+
+    ch_passing_failing_bed.a
+        .mix(ch_passing_failing_bed.b)
+        .set{ process_hops_input }
+
+    // SUBWORKFLOW_6a: turn alignments into qbed (modified bed format) which
     //              may be used to quantify hops per TF per promoter region
     PROCESS_HOPS (
-        PROCESS_ALIGNMENTS.out.bed,
-        INPUT_CHECK.out.barcode_details,
+        process_hops_input
+    )
+    ch_versions = ch_versions.mix(PROCESS_HOPS.out.versions)
+
+    STATISTICS (
+        PROCESS_HOPS.out.qbed,
         ch_promoter_bed,
         ch_background_qbed,
         ch_chr_map,
@@ -170,7 +181,7 @@ workflow CALLINGCARDS {
         params.sqlite_db_out,
         params.poisson_pseudocount
     )
-    ch_versions = ch_versions.mix(PROCESS_HOPS.out.versions.first())
+    ch_versions = ch_versions.mix(PROCESS_HOPS.out.versions)
 
     //
     // collect software versions into file
@@ -190,13 +201,17 @@ workflow CALLINGCARDS {
     ch_multiqc_files = ch_multiqc_files.mix(ch_multiqc_custom_config.collect().ifEmpty([]))
     ch_multiqc_files = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
     ch_multiqc_files = ch_multiqc_files.mix(CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml.collect())
+
     ch_multiqc_files = ch_multiqc_files.mix(PREPARE_READS.out.fastqc_zip.collect{it[1]}.ifEmpty([]))
     ch_multiqc_files = ch_multiqc_files.mix(PREPARE_READS.out.umi_log.collect{it[1]}.ifEmpty([]))
     ch_multiqc_files = ch_multiqc_files.mix(PREPARE_READS.out.trimmomatic_log.collect{it[1]}.ifEmpty([]))
-    ch_multiqc_files = ch_multiqc_files.mix(ch_samtools_stats.collect{it[1]}.ifEmpty([]))
-    ch_multiqc_files = ch_multiqc_files.mix(ch_samtools_flagstat.collect{it[1]}.ifEmpty([]))
-    ch_multiqc_files = ch_multiqc_files.mix(ch_samtools_idxstats.collect{it[1]}.ifEmpty([]))
 
+    ch_multiqc_files = ch_multiqc_files.mix(PROCESS_ALIGNMENTS.out.picard_metrics.collect{it[1]}.ifEmpty([]))
+    ch_multiqc_files = ch_multiqc_files.mix(PROCESS_ALIGNMENTS.out.preseq_lcextrap.collect{it[1]}.ifEmpty([]))
+    ch_multiqc_files = ch_multiqc_files.mix(PROCESS_ALIGNMENTS.out.preseq_ccurve.collect{it[1]}.ifEmpty([]))
+    ch_multiqc_files = ch_multiqc_files.mix(PROCESS_ALIGNMENTS.out.stats.collect{it[1]}.ifEmpty([]))
+    ch_multiqc_files = ch_multiqc_files.mix(PROCESS_ALIGNMENTS.out.flagstat.collect{it[1]}.ifEmpty([]))
+    ch_multiqc_files = ch_multiqc_files.mix(PROCESS_ALIGNMENTS.out.idxstats.collect{it[1]}.ifEmpty([]))
 
     MULTIQC (
         ch_multiqc_files.collect()
@@ -223,3 +238,23 @@ workflow.onComplete {
     THE END
 ================================================================================
 */
+
+/*
+================================================================================
+    FUNCTIONS
+================================================================================
+*/
+
+def add_status_to_meta(Map meta, filename) {
+
+    def new_meta = [:]
+
+    meta.each{ k,v ->
+        new_meta[k] = v}
+
+    def (_,status) = (filename =~ /(passing|failing)/ )[0]
+
+    new_meta["status"] = status
+
+    return new_meta
+}

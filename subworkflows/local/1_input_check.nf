@@ -15,14 +15,19 @@ workflow INPUT_CHECK {
     SAMPLESHEET_CHECK ( samplesheet )
         .csv
         .splitCsv ( header:true, sep:',' )
-        .multiMap { it ->
-            reads: create_fastq_channel(it)
-            barcode_details: create_barcode_details_channel(it)}
-        .set { out }
+        .map { it ->
+                create_fastq_channel(it) }
+        .set { ch_parsed_samplesheet }
+
+    ch_parsed_samplesheet.multiMap{
+        meta, reads, bc ->
+            reads: [meta,reads]
+            barcodes: create_barcode_details_channel2(meta,bc, params.reduce_to_se)
+        }.set{ out }
 
     emit:
     reads = out.reads                         // channel: [ val(meta), [ file(r1 fastq), file(f2_fastq)* depending on input ]]
-    barcode_details = out.barcode_details     // channel: [ val(meta), file(barcode_details.json) ]
+    barcode_details = out.barcodes            // channel: [ val(meta), file(barcode_details.json) ]
     versions = SAMPLESHEET_CHECK.out.versions // channel: [ versions.yml ]
 }
 
@@ -41,11 +46,19 @@ def create_fastq_channel(LinkedHashMap row) {
                     row.fastq_1 :
                     "${projectDir}/${row.fastq_1}"
 
+    def barcode_details = file(row.barcode_details).exists() ?
+                    row.barcode_details :
+                    "${projectDir}/${row.barcode_details}"
+
+    if (!file(barcode_details).exists()) {
+            exit 1, "ERROR: Please check input samplesheet -> Barcode detail does not exist!\n${row.barcode_details}"
+    }
+
     if (!file(fastq_1).exists()) {
         exit 1, "ERROR: Please check input samplesheet -> Read 1 FastQ file does not exist!\n${row.fastq_1}"
     }
     if (meta.single_end) {
-        fastq_meta = [ meta, [ file(fastq_1) ]]
+        fastq_meta = [ meta, [ file(fastq_1) ], [file(barcode_details)]]
     } else {
         def fastq_2 = file(row.fastq_2).exists() ?
                         row.fastq_2 :
@@ -54,7 +67,7 @@ def create_fastq_channel(LinkedHashMap row) {
         if (!file(fastq_2).exists()) {
             exit 1, "ERROR: Please check input samplesheet -> Read 2 FastQ file does not exist!\n${row.fastq_2}"
         }
-        fastq_meta = [ meta, [ file(fastq_1), file(fastq_2) ] ]
+        fastq_meta = [ meta, [ file(fastq_1), file(fastq_2) ], file(barcode_details) ]
     }
     return fastq_meta
 }
@@ -75,7 +88,26 @@ def create_barcode_details_channel(LinkedHashMap row){
             exit 1, "ERROR: Please check input samplesheet -> Barcode detail does not exist!\n${row.barcode_details}"
     }
 
-    barcode_details_arr = [meta, [file(barcode_details)]]
+    barcode_details_arr = [meta.id, [file(barcode_details)]]
+
+    return barcode_details_arr
+}
+
+
+def create_barcode_details_channel2(meta,bc,reduce_to_se){
+
+    def barcode_details_arr = []
+
+    def new_meta = [:]
+
+    meta.each{ k,v -> new_meta[k] = v}
+
+    if(reduce_to_se){
+        new_meta.single_end = true
+        barcode_details_arr = [new_meta, bc]
+    } else{
+        barcode_details_arr = [meta,bc]
+    }
 
     return barcode_details_arr
 }

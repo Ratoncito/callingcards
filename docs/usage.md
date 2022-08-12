@@ -24,7 +24,7 @@ you wish to use. If your institution already has a configuration profile on nf-c
 
 ## Samplesheet input
 
-You will need to create a samplesheet with information about the samples you would like to analyse before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 columns, and a header row as shown in the examples below.
+You will need to create a samplesheet with information about the samples you would like to analyse before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 4 columns, and a header row as shown in the examples below.
 
 ```console
 --input '[path to samplesheet file]'
@@ -44,7 +44,7 @@ then the file, with only the input set, would look like so:
 
 The pipeline will auto-detect whether a sample is single- or paired-end using the information provided in the samplesheet. The samplesheet can have as many columns as you desire, however, there is a strict requirement for the first 4 columns to match those defined in the table below.
 
-A final samplesheet file consisting of both single- and paired-end data may look something like the one below. This is for 6 samples, where `TREATMENT_REP3` has been sequenced twice.
+A final samplesheet file consisting of single end mammalian reads would look like so:
 
 ```console
 sample,fastq_1,fastq_2,barcode_details
@@ -68,8 +68,15 @@ An [example samplesheet](../assets/samplesheet.csv) has been provided with the p
 
 The barcode details json stores data which allows the pipeline to relate sequence barcodes in the calling cards reads to a given transcription factor.
 
-#### [Yeast](../assets/yeast/barcode_details.json)
+#### __[Yeast](../assets/yeast/barcode_details.json)__
 
+Yeast requires three fields: `indicies`, `components` and `tf_map`.
+
+| Fields         | Description                                                                                                                                                                            |
+|----------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `indicies`          | has the keys `r1_primer_bc`, `transposon_seq`, `r2_primer_bc`, `restriction_site`. each refers to an array which represents the [start, stop] 0-indexed indicies of the corresponding sequence in the raw fastq file. |
+| `components`         | Possesses the same keys as `indicies`. Corresponding values are arrays which list acceptable sequences for each component.                                                             |
+| `tf_map`         | This field has three keys, `r1_primer_bc`, `r2_primer_bc` and `TF`. This maps the read1 (`R1`) and read2 (`R2`) barcode components to a given transcription factor. For instance, the first sequence in `r1_primer_bc` and the first sequence in `r2_primer_bc` map to the first TF in `TF` and so on.|[]
 
 ```json
 
@@ -96,7 +103,13 @@ The barcode details json stores data which allows the pipeline to relate sequenc
 
 ```
 
-#### [Mammals](../assets/human/barcode_details.json)
+#### __[Mammals](../assets/human/barcode_details.json)__
+
+| Fields         | Description                                                                                                                                                                            |
+|----------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `indicies`          | has the keys `om_pb`, `pb_lrt1`, `srt`, `pb_lrt2`. each refers to an array which represents the [start, stop] 0-indexed indicies of the corresponding sequence in the raw fastq file. |
+| `components`         | Possesses the same keys as `indicies`. Corresponding values are arrays which list acceptable sequences for each component.                                                             |
+| `insert_seq`         | this is a key which refers to an array of insertion sequences. |[]
 
 ```json
 
@@ -166,25 +179,10 @@ $ spack install singularityce
 
 ```
 
-Next, navigate into your scratch space, make a directory, and pull the pipeline
-repo if you haven't already:
+Follow the instructions in the README quickstart to create a directory to
+store the pipeline output, and git pull the repo.
 
-```
-$ cd /scratch/<lab>/<your scratch folder>
-
-# it doesn't matter what this is called, just that you know what it is
-$ mkdir nf_cc
-
-$ cd nf_cc
-
-# if someone hasn't installed git with spack in your lab yet, then launch an
-# interactive session and install git first
-$ eval $(spack load --sh git)
-
-$ git clone https://github.com/cmatKhan/callingcards
-```
-
-Copy and paste the script below into a file called, for example, `run_nf.sh`
+Next, copy and paste the script below into a file called, for example, `run_nf.sh`
 
 ```bash
 #!/usr/bin/env bash
@@ -201,6 +199,7 @@ eval $(spack load --sh nextflow)
 tmp=$(mktemp -d /tmp/$USER-singularity-XXXXXX)
 
 mkdir singularity
+mkdir local_tmp
 
 export NXF_SINGULARITY_CACHEDIR=singularity
 export SINGULARITY_TMPDIR=$tmp
@@ -209,7 +208,8 @@ export SINGULARITY_CACHEDIR=$tmp
 # if the repo is in this directory, then this relative path callingcards/main.nf
 # will work. Otherwise, replace callingcards/main.nf with the path, relative or
 # absolute, to the correct main.nf
-nextflow run callingcards/main.nf -profile test_slurm,singularity -resume
+# NOTE: you can also try the test_human profile
+nextflow run callingcards/main.nf -profile test_yeast,singularity,htcf -resume
 ```
 
 Launch this with the command

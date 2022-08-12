@@ -5,6 +5,91 @@
     "description": "A bioinformatics analysis pipeline for processing Transposon Calling Cards sequencing data",
     "type": "object",
     "definitions": {
+        "statistics_options": {
+            "title": "Statistics options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "poisson_pseudocount": {
+                    "type": "number",
+                    "default": 0.2,
+                    "description": "pseudocount to add to poisson p-value calculation"
+                }
+            },
+            "required": [
+                "poisson_pseudocount"
+            ]
+        },
+        "barcode_options": {
+            "title": "Barcode options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "r1_bc_pattern": {
+                    "type": "string",
+                    "default": "NNNNNNNNXXXX",
+                    "description": "UMI tools style barcode pattern for R1. See UMI tools docs for details"
+                },
+                "r2_bc_pattern": {
+                    "type": "string",
+                    "default": "NNNNNXXXXXXXXXXXXXXXXX",
+                    "description": "UMI tools style barcode pattern for R2. See UMI tools docs for details"
+                },
+                "barcode_length": {
+                    "type": "integer",
+                    "description": "the combined length of the barcodes in R1 and R2",
+                    "default": 13
+                },
+                "insertion_length": {
+                    "type": "integer",
+                    "default": 1,
+                    "description": "length of the insertion sequence upstream of the insertion site (mammals only)"
+                }
+            },
+            "required": [
+                "r1_bc_pattern",
+                "barcode_length",
+                "insertion_length"
+            ]
+        },
+        "transposon_hops_options": {
+            "title": "Transposon hops options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "sqlite_db_out": {
+                    "type": "string",
+                    "default": ":memory:",
+                    "description": "either a filename with suffix .sqlite, or ':memory:'. If a filename is provided, the file will be saved in the output directory"
+                }
+            },
+            "required": [
+                "sqlite_db_out"
+            ]
+        },
+        "yeast_options": {
+            "title": "yeast options",
+            "type": "object",
+            "description": "Options specific to yeast",
+            "default": "",
+            "properties": {
+                "reduce_to_se": {
+                    "type": "boolean",
+                    "description": "should paired end reads be reduced to single end reads after extracting the barcodes?"
+                },
+                "r1_crop": {
+                    "type": "boolean",
+                    "description": "after reducing PE reads to single end, should reads be cropped?"
+                },
+                "r1_crop_length": {
+                    "type": "integer",
+                    "default": 88
+                }
+            }
+        },
         "input_output_options": {
             "title": "Input/output options",
             "type": "object",
@@ -14,18 +99,9 @@
                 "input",
                 "organism",
                 "require_exact_length",
-                "background_qbed",
-                "chr_map",
-                "standard_chr_format",
                 "aligner",
                 "min_mapq",
-                "barcode_length",
-                "insertion_length",
-                "r1_bc_pattern",
-                "promoter_bed",
-                "pileup_stranded",
-                "sqlite_db_out",
-                "poisson_pseudocount"
+                "promoter_bed"
             ],
             "properties": {
                 "input": {
@@ -46,10 +122,6 @@
                         "mammal"
                     ]
                 },
-                "save_reference": {
-                    "type": "boolean",
-                    "description": "save reference genome indicies, etc?"
-                },
                 "save_intermediate": {
                     "type": "boolean",
                     "description": "save intermediate files, such as bams?"
@@ -59,83 +131,20 @@
                     "description": "Whether or not to remove soft clipped alignments from the count of passing transpositions. Default is False. For yeast, should be True",
                     "default": "false"
                 },
-                "reduce_to_se": {
-                    "type": "boolean",
-                    "description": "should paired end reads be reduced to single end reads after extracting the barcodes?"
-                },
-                "r1_crop": {
-                    "type": "boolean",
-                    "description": "after reducing PE reads to single end, should reads be cropped?"
-                },
-                "r1_crop_length": {
-                    "type": "integer",
-                    "default": 88
-                },
-                "background_qbed": {
-                    "type": "string",
-                    "default": "None"
-                },
-                "chr_map": {
-                    "type": "string",
-                    "default": "None"
-                },
-                "standard_chr_format": {
-                    "type": "string",
-                    "default": "refseq",
-                    "description": "one of refseq, ucsc, ignomes or ensembl. Using the chr_map file, this will standardize all chromosomes names across the various tables"
-                },
                 "aligner": {
                     "type": "string",
                     "description": "Choose one of {'bwamem2', } to align the reads",
                     "default": "bwamem2"
-                },
-                "bwamem2_index": {
-                    "type": "string",
-                    "default": "None"
                 },
                 "min_mapq": {
                     "type": "integer",
                     "default": 10,
                     "description": "minimum alignment quality (mapq in bam file) read to accept in the bed file which summarizes unique calling cards insertions by barcode"
                 },
-                "barcode_length": {
-                    "type": "integer",
-                    "description": "the combined length of the barcodes in R1 and R2",
-                    "default": 13
-                },
-                "insertion_length": {
-                    "type": "integer",
-                    "default": 1,
-                    "description": "length of the insertion sequence upstream of the insertion site (mammals only)"
-                },
-                "r1_bc_pattern": {
-                    "type": "string",
-                    "default": "NNNNNNNNXXXX",
-                    "description": "UMI tools style barcode pattern for R1. See UMI tools docs for details"
-                },
-                "r2_bc_pattern": {
-                    "type": "string",
-                    "default": "NNNNNXXXXXXXXXXXXXXXXX",
-                    "description": "UMI tools style barcode pattern for R2. See UMI tools docs for details"
-                },
                 "promoter_bed": {
                     "type": "string",
                     "description": "path to the bed file which defines promoter regions",
                     "fa_icon": "fas fa-file"
-                },
-                "pileup_stranded": {
-                    "type": "string",
-                    "description": "Boolean -- whether to consider strand of reads in pileup. Default is FALSE"
-                },
-                "sqlite_db_out": {
-                    "type": "string",
-                    "default": ":memory:",
-                    "description": "either a filename with suffix .sqlite, or ':memory:'. If a filename is provided, the file will be saved in the output directory"
-                },
-                "poisson_pseudocount": {
-                    "type": "number",
-                    "default": 0.2,
-                    "description": "pseudocount to add to poisson p-value calculation"
                 },
                 "outdir": {
                     "type": "string",
@@ -178,9 +187,17 @@
                     "help_text": "This parameter is *mandatory* if `--genome` is not specified. If you don't have a BWA index available this will be generated for you automatically. Combine with `--save_reference` to save BWA index for future runs.",
                     "fa_icon": "far fa-file-code"
                 },
+                "bwamem2_index": {
+                    "type": "string",
+                    "default": "None"
+                },
                 "fasta_index": {
                     "type": "string",
                     "default": "None"
+                },
+                "save_reference": {
+                    "type": "boolean",
+                    "description": "save reference genome indicies, etc?"
                 },
                 "igenomes_base": {
                     "type": "string",
@@ -196,8 +213,26 @@
                     "fa_icon": "fas fa-ban",
                     "hidden": true,
                     "help_text": "Do not load `igenomes.config` when running the pipeline. You may choose this option if you observe clashes between custom parameters and those supplied in `igenomes.config`."
+                },
+                "chr_map": {
+                    "type": "string",
+                    "default": "None"
+                },
+                "standard_chr_format": {
+                    "type": "string",
+                    "default": "ucsc",
+                    "description": "one of refseq, ucsc, ignomes or ensembl. Using the chr_map file, this will standardize all chromosomes names across the various tables"
+                },
+                "background_qbed": {
+                    "type": "string",
+                    "default": "None"
                 }
-            }
+            },
+            "required": [
+                "chr_map",
+                "standard_chr_format",
+                "background_qbed"
+            ]
         },
         "institutional_config_options": {
             "title": "Institutional config options",
@@ -364,6 +399,18 @@
         }
     },
     "allOf": [
+        {
+            "$ref": "#/definitions/statistics_options"
+        },
+        {
+            "$ref": "#/definitions/barcode_options"
+        },
+        {
+            "$ref": "#/definitions/transposon_hops_options"
+        },
+        {
+            "$ref": "#/definitions/yeast_options"
+        },
         {
             "$ref": "#/definitions/input_output_options"
         },

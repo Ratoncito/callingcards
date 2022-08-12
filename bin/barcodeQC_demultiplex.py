@@ -51,7 +51,7 @@ def parse_args(args=None):
 
     parser = argparse.ArgumentParser(description=Description, epilog=Epilog)
     parser.add_argument("bed_path",
-                         help="path to the input bam file")
+                         help="path to the input bed file")
     parser.add_argument("barcode_details",
                          help="A json which describes components of the barcode \
                             which occurs in the name column of the calling cards \
@@ -62,7 +62,7 @@ def aggregate_hops(df, coordinate_grouping_fields, qbed_col_order):
     """aggregate a qbed-style bed format dataframe. Note that this expects that
     the column with number of reads at a give spot be called 'reads'
 
-    :param df: a qbed-ctyle bed format dataframe
+    :param df: a qbed-style bed format dataframe
     :type df: pandas DataFrame
     :param coordinate_grouping_fields: list of fields by which to group
     :type coordinate_grouping_fields: list
@@ -196,7 +196,7 @@ def barcode_qc(bed_df,
                 fltr_df,
                 COORDINATE_GROUPING_FIELDS+['TF'],
                 qbed_COL_ORDER)\
-                .to_csv(fltr_bed_output_name+"_"+group_name + "_bc_fltr.qbed",
+                .to_csv(fltr_bed_output_name+"_"+group_name + ".qbed",
                             sep = "\t",
                             header = None,
                             index = False)
@@ -207,7 +207,7 @@ def barcode_qc(bed_df,
             fltr_bed_df,
             COORDINATE_GROUPING_FIELDS,
             qbed_COL_ORDER)\
-            .to_csv(fltr_bed_output_name+"_bc_fltr.qbed",
+            .to_csv(fltr_bed_output_name+".qbed",
                                         sep = "\t",
                                         header = None,
                                         index = False)
