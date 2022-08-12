@@ -27,15 +27,15 @@ On release, automated continuous integration tests run the pipeline on a full-si
 ## Pipeline summary
 
 1. Prepare Reads
-    1. Extract barcodes ([UMItools](https://github.com/CGATOxford/UMI-tools))
-    1. Trim, and reduce to only R1 depending on user input ([Trimmomatic](http://www.usadellab.org/cms/?page=trimmomatic))
-1. Read QC ([FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/))
+    1. Extract barcodes ([`UMItools`](https://github.com/CGATOxford/UMI-tools))
+    1. Trim, and reduce to only R1 depending on user input ([`Trimmomatic`](http://www.usadellab.org/cms/?page=trimmomatic))
+1. Read QC ([`FastQC`](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/))
 1. Prepare the Genome
     1. Samtools faidx and aligner indicies
 1. Alignment
-    1. [bwamem2](https://github.com/bwa-mem2/bwa-mem2)
+    1. [`bwamem2`](https://github.com/bwa-mem2/bwa-mem2)
 1. Process Alignments
-    1. Extract alignment QC metrics ([samtools](https://www.htslib.org/))
+    1. Extract alignment QC metrics ([`Samtools`](https://www.htslib.org/))
     1. Add Read Group and tags to alignment files ([custom script](https://github.com/cmatKhan/callingcards/blob/main/bin/barcodeQC_demultiplex.py))
     1. Quantify transposon hops ([custom script](https://github.com/cmatKhan/callingcards/blob/main/bin/barcodeQC_demultiplex.py))
 1. Process Transposon Quantification
