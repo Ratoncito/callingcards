@@ -14,7 +14,7 @@
                 "input",
                 "organism",
                 "require_exact_length",
-                "background_ccf",
+                "background_qbed",
                 "chr_map",
                 "standard_chr_format",
                 "aligner",
@@ -71,7 +71,7 @@
                     "type": "integer",
                     "default": 88
                 },
-                "background_ccf": {
+                "background_qbed": {
                     "type": "string",
                     "default": "None"
                 },

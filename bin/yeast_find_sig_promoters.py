@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """Calculate poisson and hypergeomtric p-values for a calling cards experiment.
-Given the experiment CCF file, background CCF file, promoter definitions,
+Given the experiment qbed file, background qbed file, promoter definitions,
 a csv which maps various chromosome naming conventions to one another (eg
 refseq to ucsc), and a choice of which chromosome naming convention to use,
 aggregate hops over the promoter regions and calculate the poisson and
@@ -27,7 +27,7 @@ written by: chase mateusiak, chasem@wustl.edu, 202207
 
 :output: a statistics data frame which will have poisson_pval
     and hypergeom_pval columns with filename
-    <experimental_ccf_basename>_stats.csv. Optionally, the sqlite database
+    <experimental_qbed_basename>_stats.csv. Optionally, the sqlite database
     may be saved to disc. A cmd line argument directs the location.
 """
 
@@ -201,10 +201,10 @@ def parse_args(args=None):
     parser.add_argument("--promoter_bed_path", "-p",
                         type=str,
                         help="path to to a bed file format promoter file")
-    parser.add_argument("--background_ccf_path", "-b",
+    parser.add_argument("--background_qbed_path", "-b",
                         type=str,
                         help="path` to the background data table")
-    parser.add_argument("--experimental_ccf_path", "-e",
+    parser.add_argument("--experimental_qbed_path", "-e",
                         type=str,
                         help="path to the experimental data table")
     parser.add_argument("--chr_map", "-c",
@@ -238,7 +238,7 @@ def main(args=None):
     args = parse_args(args)
 
     PROMOTER_BED_COLNAMES = ["chrom", "chromStart", "chromEnd", "name", "score", "strand"]
-    CCF_COLNAMES = ['chrom', 'chromStart', 'chromEnd', 'reads', 'strand']
+    qbed_COLNAMES = ['chrom', 'chromStart', 'chromEnd', 'reads', 'strand']
     INDEX_COL_STRING = '("chrom", "chromStart" ASC, "chromEnd" ASC, "strand");'
 
     if args.sqlite_db_out != ":memory:" and\
@@ -295,24 +295,24 @@ def main(args=None):
         create_db_table(con, promoter_df, promoter_dict)
         del promoter_df
 
-    if not exists(args.background_ccf_path):
-        raise FileExistsError("File Not Found: %s" %args.background_ccf_path)
+    if not exists(args.background_qbed_path):
+        raise FileExistsError("File Not Found: %s" %args.background_qbed_path)
     else:
-        background_df = pd.read_csv(args.background_ccf_path,
+        background_df = pd.read_csv(args.background_qbed_path,
                                      sep = "\t",
-                                     names = CCF_COLNAMES)
+                                     names = qbed_COLNAMES)
         background_df = standardize_chr_names(background_df,
                                             chr_map_df,
                                             args.standard_chr_format)
         create_db_table(con, background_df, background_dict)
         del background_df
 
-    if not exists(args.experimental_ccf_path):
-        raise FileExistsError("File Not Found: %s" %args.experimental_ccf_path)
+    if not exists(args.experimental_qbed_path):
+        raise FileExistsError("File Not Found: %s" %args.experimental_qbed_path)
     else:
-        experimental_df = pd.read_csv(args.experimental_ccf_path,
+        experimental_df = pd.read_csv(args.experimental_qbed_path,
                                   sep = "\t",
-                                  names = CCF_COLNAMES)
+                                  names = qbed_COLNAMES)
         experimental_df = standardize_chr_names(experimental_df,
                                                   chr_map_df,
                                                   args.standard_chr_format)
@@ -375,7 +375,7 @@ def main(args=None):
     con.close()
 
     # write to CWD
-    quant_output_path = splitext(basename(args.experimental_ccf_path))[0] + \
+    quant_output_path = splitext(basename(args.experimental_qbed_path))[0] + \
                             "_stats.csv"
     quant_df.to_csv(quant_output_path, index=False)
 

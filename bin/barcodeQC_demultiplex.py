@@ -36,8 +36,8 @@ BED_6_3_COLNAMES = ['chrom', 'chromStart', 'chromEnd',
 # of pooled barcodes, this occurs after splitting into individual barcode
 # tables
 COORDINATE_GROUPING_FIELDS = ['chrom','chromStart','chromEnd','strand']
-# ccf fields and order
-CCF_COL_ORDER = ['chrom', 'chromStart', 'chromEnd', 'reads', 'strand']
+# qbed fields and order
+qbed_COL_ORDER = ['chrom', 'chromStart', 'chromEnd', 'reads', 'strand']
 
 # NOTE that there is some hard coding with regards to the fields/keys of
 # the barcode to TF mapping fields (this is for yeast right now)
@@ -58,18 +58,18 @@ def parse_args(args=None):
                                 bed file format")
     return parser.parse_args(args)
 
-def aggregate_hops(df, coordinate_grouping_fields, ccf_col_order):
-    """aggregate a ccf-style bed format dataframe. Note that this expects that
+def aggregate_hops(df, coordinate_grouping_fields, qbed_col_order):
+    """aggregate a qbed-style bed format dataframe. Note that this expects that
     the column with number of reads at a give spot be called 'reads'
 
-    :param df: a ccf-ctyle bed format dataframe
+    :param df: a qbed-ctyle bed format dataframe
     :type df: pandas DataFrame
     :param coordinate_grouping_fields: list of fields by which to group
     :type coordinate_grouping_fields: list
-    :param ccf_col_order: order of columns in return dataframe
-    :type ccf_col_order: list
+    :param qbed_col_order: order of columns in return dataframe
+    :type qbed_col_order: list
 
-    :returns: an aggregated dataframe in expected ccf col order
+    :returns: an aggregated dataframe in expected qbed col order
     :rtype: pandas DataFrame
     """
 
@@ -77,15 +77,15 @@ def aggregate_hops(df, coordinate_grouping_fields, ccf_col_order):
         for x in coordinate_grouping_fields]) == len(coordinate_grouping_fields):
         ValueError('coordinate_grouping_fields not subset of df.columns')
     elif not sum([True if x in coordinate_grouping_fields else False \
-        for x in ccf_col_order]) == len(ccf_col_order):
-            ValueError('ccf_col_order not in coordinate_grouping_fields')
+        for x in qbed_col_order]) == len(qbed_col_order):
+            ValueError('qbed_col_order not in coordinate_grouping_fields')
 
     agg_df = df\
         .groupby(coordinate_grouping_fields)['reads']\
         .agg(['sum'])\
         .reset_index()\
         .rename(columns={'sum':'reads'})\
-        [CCF_COL_ORDER]
+        [qbed_COL_ORDER]
 
     return agg_df
 
@@ -195,8 +195,8 @@ def barcode_qc(bed_df,
             aggregate_hops(
                 fltr_df,
                 COORDINATE_GROUPING_FIELDS+['TF'],
-                CCF_COL_ORDER)\
-                .to_csv(fltr_bed_output_name+"_"+group_name + "_bc_fltr.ccf",
+                qbed_COL_ORDER)\
+                .to_csv(fltr_bed_output_name+"_"+group_name + "_bc_fltr.qbed",
                             sep = "\t",
                             header = None,
                             index = False)
@@ -206,8 +206,8 @@ def barcode_qc(bed_df,
         aggregate_hops(
             fltr_bed_df,
             COORDINATE_GROUPING_FIELDS,
-            CCF_COL_ORDER)\
-            .to_csv(fltr_bed_output_name+"_bc_fltr.ccf",
+            qbed_COL_ORDER)\
+            .to_csv(fltr_bed_output_name+"_bc_fltr.qbed",
                                         sep = "\t",
                                         header = None,
                                         index = False)

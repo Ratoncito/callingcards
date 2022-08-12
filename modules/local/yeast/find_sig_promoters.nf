@@ -9,9 +9,9 @@ process YEAST_FIND_SIG_PROMOTERS {
         'quay.io/biocontainers/mulled-v2-a1289c2d7470e63e3c3a9f6131984bbf7c28ad45:92387cc4b89149a92d9f98955d1624b48f915ddb-0' }"
 
     input:
-    tuple val(meta), path(expr_ccf)
+    tuple val(meta), path(expr_qbed)
     path(promoter_bed)
-    path(background_ccf)
+    path(background_qbed)
     path(chr_map)
     val standard_chr_format
     val sqlite_db_out
@@ -27,8 +27,8 @@ process YEAST_FIND_SIG_PROMOTERS {
     """
         yeast_find_sig_promoters.py \
             -p $promoter_bed \
-            -b $background_ccf \
-            -e $expr_ccf \
+            -b $background_qbed \
+            -e $expr_qbed \
             -c $chr_map \
             -s $standard_chr_format \
             -d $sqlite_db_out \

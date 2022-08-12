@@ -10,7 +10,7 @@ workflow PROCESS_HOPS {
     bed      // channel: [ val(meta), file(bed) ]
     barcode_details // channel: [val(meta), file(barcode_details)]
     promoter_bed
-    background_ccf
+    background_qbed
     chr_map
     standard_chr_format
     sqlite_db_out
@@ -33,9 +33,9 @@ workflow PROCESS_HOPS {
     BARCODE_QC_DEMULTIPLEX ( bed, barcode_details )
     ch_versions = ch_versions.mix(BARCODE_QC_DEMULTIPLEX.out.versions)
 
-    BARCODE_QC_DEMULTIPLEX.out.ccf
-        .map{meta,ccf_list ->
-            ccf_list}
+    BARCODE_QC_DEMULTIPLEX.out.qbed
+        .map{meta,qbed_list ->
+            qbed_list}
         .flatten()
         .map{ it -> [["id": it.baseName-"_bc_fltr"],it]}
         .set{ find_sig_promoters_input }
@@ -44,7 +44,7 @@ workflow PROCESS_HOPS {
         YEAST_FIND_SIG_PROMOTERS (
             find_sig_promoters_input,
             promoter_bed,
-            background_ccf,
+            background_qbed,
             chr_map,
             standard_chr_format,
             sqlite_db_out,

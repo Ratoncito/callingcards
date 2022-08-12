@@ -17,7 +17,7 @@ def checkPathParamList = [ params.input,
                            params.fasta_index,
                            params.bwamem2_index,
                            params.promoter_bed,
-                           params.background_ccf,
+                           params.background_qbed,
                            params.chr_map ]
 
 for (param in checkPathParamList) {
@@ -99,7 +99,7 @@ workflow CALLINGCARDS {
     ch_samtools_idxstats = Channel.empty()
 
     ch_promoter_bed      = Channel.of(params.promoter_bed)
-    ch_background_ccf    = Channel.of(params.background_ccf)
+    ch_background_qbed    = Channel.of(params.background_qbed)
     ch_chr_map           = Channel.of(params.chr_map)
 
     //
@@ -158,13 +158,13 @@ workflow CALLINGCARDS {
     ch_versions          = ch_versions.mix(PROCESS_ALIGNMENTS.out.versions.first())
 
     //
-    // SUBWORKFLOW_6: turn alignments into ccf (modified bed format) which
+    // SUBWORKFLOW_6: turn alignments into qbed (modified bed format) which
     //              may be used to quantify hops per TF per promoter region
     PROCESS_HOPS (
         PROCESS_ALIGNMENTS.out.bed,
         INPUT_CHECK.out.barcode_details,
         ch_promoter_bed,
-        ch_background_ccf,
+        ch_background_qbed,
         ch_chr_map,
         params.standard_chr_format,
         params.sqlite_db_out,

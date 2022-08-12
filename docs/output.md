@@ -6,7 +6,15 @@ This document describes the output produced by the pipeline. Most of the plots a
 
 The directories listed below will be created in the results directory after the pipeline has finished. All paths are relative to the top-level results directory.
 
-<!-- TODO nf-core: Write this documentation describing your workflow's output -->
+## quantification
+
+This directory will store `<sample>_<tf>_passing.bed` and `_failing.bed` which store
+represent a disjoint set of the reads from the alignment. Files with the suffix
+`_ppm.tsv` are percent probability matricies of the various parts of the barcode
+from the `barcode_details.json` file for a given sample. Similarly, files with
+the suffix `_tally.tsv`.
+
+The output intended for analysis is `_bc_fltr.qbed`
 
 ## Pipeline overview
 

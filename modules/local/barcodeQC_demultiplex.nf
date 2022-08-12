@@ -16,7 +16,7 @@ process BARCODE_QC_DEMULTIPLEX {
     bed_meta.id == bc_meta.id
 
     output:
-    tuple val(bed_meta), path("*_bc_fltr.ccf"), emit: ccf   // [val(meta), path(ccf) ]
+    tuple val(bed_meta), path("*_bc_fltr.qbed"), emit: qbed   // [val(meta), path(qbed) ]
     path("*_tally.tsv" )                      , emit: tally // [ path(tally)]
     path("*_ppm.tsv")                         , emit: ppm   // [ path(ppm)]
     path  "versions.yml"                      , emit: versions

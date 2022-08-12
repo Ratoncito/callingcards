@@ -22,7 +22,7 @@ of read1.
 Bed format v1.0
 https://github.com/samtools/hts-specs/blob/master/BEDv1.pdf
 
-Historic Note: This is a 'modified' ccf file which more closely follows the
+Historic Note: This is a 'modified' qbed file which more closely follows the
 bed specifications. Each entry is a hop -- no aggregation at this point.
 
 The output follows a Bed6+3 format with the following fields:
