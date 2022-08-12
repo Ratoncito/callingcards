@@ -53,7 +53,7 @@ workflow PROCESS_HOPS {
         ch_sig_promoters.mix(YEAST_FIND_SIG_PROMOTERS.out.sig_promoters)
         ch_sig_promoters_sqlite.mix(YEAST_FIND_SIG_PROMOTERS.out.sig_promoters_sqlite)
     } else if(params.organism == 'mammal'){
-        exit 1, 'Process Hops Error: NotImplementedError: mammals'
+        println 'Statistics module not implemented for mammals'
     } else{
         exit 1, 'Process Hops Error:  Organism not recognized'
     }

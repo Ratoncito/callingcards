@@ -40,7 +40,11 @@
                 },
                 "organism": {
                     "type": "string",
-                    "default": "None"
+                    "default": "mammal",
+                    "enum": [
+                        "yeast",
+                        "mammal"
+                    ]
                 },
                 "save_reference": {
                     "type": "boolean",

@@ -59,7 +59,7 @@ Note that more detailed instructions are available in [usage](https://nf-co.re/c
 
    $ cd calling_card_output
 
-   $ git clone https://github.com/cmatKhan/callingcards/blob/main/bin/barcodeQC_demultiplex.py
+   $ git clone https://github.com/cmatKhan/callingcards.git
 
    # you can replace singularity below with any one of the dependency managers
    # There are also other test profiles -- see usage for more detail
@@ -76,10 +76,16 @@ Note that more detailed instructions are available in [usage](https://nf-co.re/c
 1. Start running your own analysis!
 
    ```bash
-   nextflow run callingcards/main.nf -params-file params.json -profile <docker/singularity/podman/shifter/charliecloud/conda/institute>
+   nextflow run callingcards/main.nf \
+        -params-file params.json \
+        -profile <docker/singularity/podman/shifter/charliecloud/conda/institute> \
+        # possibly more config settings for your environment
+        -c local.config
    ```
 
 The `params.json` file is described in [usage](https://nf-co.re/callingcards/usage)
+Configuration is discussed in [Pipeline configuration](https://nf-co.re/usage/configuration) and
+in the [configuration section of the nextflow documentation](https://www.nextflow.io/docs/latest/config.html)
 
 ## Documentation
 
