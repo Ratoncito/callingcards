@@ -147,6 +147,112 @@ results         # Finished results (configurable, see below)
 # Other nextflow hidden files, eg. history of pipeline runs and old logs.
 ```
 
+### Running the pipeline on HTCF
+
+You will need the following system dependencies. These can be installed with
+`spack`, and therefore only need to be done one time by one person in the lab.
+
+```
+
+$ interactive
+
+$ spack install git
+
+$ spack install openjdk
+
+$ spack install nextflow
+
+$ spack install singularityce
+
+```
+
+Next, navigate into your scratch space, make a directory, and pull the pipeline
+repo if you haven't already:
+
+```
+$ cd /scratch/<lab>/<your scratch folder>
+
+# it doesn't matter what this is called, just that you know what it is
+$ mkdir nf_cc
+
+$ cd nf_cc
+
+# if someone hasn't installed git with spack in your lab yet, then launch an
+# interactive session and install git first
+$ eval $(spack load --sh git)
+
+$ git clone https://github.com/cmatKhan/callingcards
+```
+
+Copy and paste the script below into a file called, for example, `run_nf.sh`
+
+```bash
+#!/usr/bin/env bash
+
+#SBATCH --mem-per-cpu=10G
+#SBATCH -J cc_nf_test.out
+#SBATCH -o cc_nf_test.out
+
+# load system dependencies -- on HTCF, we use spack
+eval $(spack load --sh openjdk)
+eval $(spack load --sh singularityce@3.8.0)
+eval $(spack load --sh nextflow)
+
+tmp=$(mktemp -d /tmp/$USER-singularity-XXXXXX)
+
+mkdir singularity
+
+export NXF_SINGULARITY_CACHEDIR=singularity
+export SINGULARITY_TMPDIR=$tmp
+export SINGULARITY_CACHEDIR=$tmp
+
+# if the repo is in this directory, then this relative path callingcards/main.nf
+# will work. Otherwise, replace callingcards/main.nf with the path, relative or
+# absolute, to the correct main.nf
+nextflow run callingcards/main.nf -profile test_slurm,singularity -resume
+```
+
+Launch this with the command
+
+```bash
+$ sbatch run_nf.sh
+
+```
+At this point, you can check progress with `squeue -u $USER`. You can also
+track progress by looking at the nextflow process log, which in this case
+will be called `cc_nf_test.out`:
+
+```bash
+$ tail -150 cc_nf_test.out
+```
+Note that it sometimes takes HTCF a long time to start scheduling processes. If
+there is no error message in `cc_nf_test.out`, then just keep waiting.
+
+### Running the pipeline on your laptop
+
+See the [README]("../README.md") Quick Start section for instructions on installing
+nextflow and one of docker, singularity or conda (conda should be an absolute last choice).
+Then follow the instructions in the HTCF tutorial above to create a directory
+in which you will clone the callingcards pipeline repository, and launch the pipeline.
+Next, copy and paste the script below into a script named something like `run_nf.sh`
+
+```bash
+
+#!/usr/bin/bash
+
+tmp=$(mktemp -d /tmp/$USER-singularity-XXXXXX)
+mkdir singularity
+
+export NXF_SINGULARITY_CACHEDIR=singularity
+export SINGULARITY_TMPDIR=$tmp
+export SINGULARITY_CACHEDIR=$tmp
+
+nextflow run nf-core-callingcards/main.nf  -profile test_yeast,singularity -resume
+
+```
+You'll run this with the command `.run_nf.sh` and the process logger will
+print to `stdout`.
+
 ### Updating the pipeline
 
 When you run the above command, Nextflow automatically pulls the pipeline code from GitHub and stores it as a cached version. When running the pipeline after this, it will always use the cached version if available - even if the pipeline has been updated since. To make sure that you're running the latest version of the pipeline, make sure that you regularly update the cached version of the pipeline:
